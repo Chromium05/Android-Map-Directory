@@ -1,62 +1,69 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { BottomTabInset, Colors, Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function HomeScreen() {
+  const safeAreaInsets = useSafeAreaInsets();
+  const theme = useTheme();
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: safeAreaInsets.top + Spacing.four,
+          paddingHorizontal: Spacing.four,
+          paddingBottom: BottomTabInset + Spacing.four,
+        }}>
+        <ThemedView style={styles.header}>
+          <ThemedText type="monoTag" themeColor="textSecondary">
+            DIREKTORI · KAMPUS
+          </ThemedText>
+          <ThemedText type="display" style={styles.title}>
+            Mau ke unit mana hari ini?
           </ThemedText>
         </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
+        <ThemedView type="backgroundElement" style={styles.searchBar}>
+          <ThemedText themeColor="ink3">🔍 Cari unit, gedung, atau lantai</ThemedText>
         </ThemedView>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
+        <ThemedView
+          style={[styles.statusStrip, { backgroundColor: Colors.light.routeTint }]}>
+          <ThemedText type="caption" themeColor="routeInk">
+            📍 Lokasi kamu
+          </ThemedText>
+          <ThemedText type="caption" themeColor="route" style={{ fontWeight: '700' }}>
+            [Ubah]
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedText type="titleL" style={{ marginTop: Spacing.six }}>
+          Terdekat dari kamu
+        </ThemedText>
+
+        <ThemedView type="backgroundElement" style={styles.featuredCard}>
+          <ThemedView style={styles.placeholderPhoto}>
+            <ThemedText type="monoMeta" themeColor="ink3">
+              PHOTO PLACEHOLDER
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={styles.cardContent}>
+            <ThemedText type="monoTag" themeColor="textSecondary">
+              DEPARTEMEN · GEDUNG TI
+            </ThemedText>
+            <ThemedText type="titleM">Kantin Pusat A</ThemedText>
+            <ThemedText type="caption" themeColor="textSecondary">
+              ● Buka 07–17 · 120m
+            </ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -64,35 +71,46 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+  header: {
+    gap: Spacing.one,
+    marginBottom: Spacing.six,
   },
   title: {
-    textAlign: 'center',
+    maxWidth: 240,
   },
-  code: {
-    textTransform: 'uppercase',
+  searchBar: {
+    height: 48,
+    borderRadius: Radius.md,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+    borderWidth: 1,
+    borderColor: Colors.light.hairline,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  statusStrip: {
+    marginTop: Spacing.three,
+    height: 34,
+    borderRadius: Radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+  },
+  featuredCard: {
+    marginTop: Spacing.four,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.light.hairline,
+  },
+  placeholderPhoto: {
+    height: 120,
+    backgroundColor: Colors.light.backgroundSelected,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardContent: {
+    padding: Spacing.four,
+    gap: Spacing.one,
   },
 });
