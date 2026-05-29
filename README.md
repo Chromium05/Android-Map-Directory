@@ -1,56 +1,82 @@
-# Welcome to your Expo app 👋
+# Map Directory
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplikasi direktori kampus berbasis React Native (Expo) untuk mencari dan menjelajahi unit-unit kampus — departemen, program studi, lab, dan kantor administrasi.
 
-## Get started
+> Proyek Mata Kuliah Cloud Computing · Expo SDK 55 · TypeScript
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Fitur
 
-2. Start the app
+- **Beranda** — daftar unit dengan filter kategori, status buka/tutup, dan jarak
+- **Peta** — peta kampus interaktif dengan pin lokasi tiap unit
+- **Info** — detail unit: lantai, jam operasional, sub-ruangan, dan rating
+- Dukungan tema terang/gelap otomatis
+- Berjalan di Android, iOS, dan Web
 
-   ```bash
-   npx expo start
-   ```
+## Tech Stack
 
-In the output, you'll find options to open the app in a
+| Layer | Teknologi |
+|---|---|
+| Framework | Expo SDK 55 + React Native 0.83 |
+| Routing | Expo Router (file-based, typed routes) |
+| Language | TypeScript (strict mode) |
+| Maps | `expo-maps` |
+| Styling | Token-based theming (`src/constants/theme.ts`) |
+| Build | EAS Build + EAS Submit |
+| Compiler | React Compiler (enabled) |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Struktur Direktori
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/
+  app/
+    _layout.tsx          # Root layout
+    login.tsx            # Login screen
+    (tabs)/
+      index.tsx          # Beranda
+      peta.tsx           # Peta kampus
+      info.tsx           # Info
+    unit/[id].tsx        # Detail unit
+  components/            # UI primitives & atoms
+  constants/
+    theme.ts             # Color tokens, typography, spacing
+    units.ts             # Data unit kampus
+  hooks/
+    use-theme.ts         # Active color scheme hook
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Platform-specific variants use Metro extensions (`.web.tsx` for web).
 
-### Other setup steps
+## Menjalankan Aplikasi
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm install
+```
 
-## Learn more
+```bash
+npm start          # Dev server (pilih platform dari prompt)
+npm run android    # Android emulator
+npm run ios        # iOS simulator
+npm run web        # Browser
+npm run lint       # ESLint
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Gunakan `npx tsc --noEmit` untuk type-check.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Build & Deploy
 
-## Join the community
+Build menggunakan [EAS](https://expo.dev/eas). Profile tersedia: `development`, `preview`, `production`.
 
-Join our community of developers creating universal apps.
+```bash
+eas build --profile development --platform android
+eas build --profile production --platform android
+eas submit --platform android
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Referensi
+
+- [Expo SDK 55 Docs](https://docs.expo.dev/versions/v55.0.0/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
+- [EAS Build](https://docs.expo.dev/build/introduction/)
+- `Design.md` — design system & screen spec (color tokens, typography, component specs)
