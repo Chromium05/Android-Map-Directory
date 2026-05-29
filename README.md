@@ -6,6 +6,14 @@ Aplikasi direktori kampus berbasis React Native (Expo) untuk mencari dan menjela
 
 ---
 
+## Screenshots
+
+| Beranda | Peta | Info |
+|:---:|:---:|:---:|
+| ![Beranda](assets/screenshots/beranda.png) | ![Peta](assets/screenshots/peta.png) | ![Info](assets/screenshots/info.png) |
+
+---
+
 ## Fitur
 
 - **Beranda** — daftar unit dengan filter kategori, status buka/tutup, dan jarak
