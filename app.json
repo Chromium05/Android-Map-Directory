@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Android-Map-Directory",
-    "slug": "Android-Map-Directory",
+    "name": "Map Directory",
+    "slug": "Map-Directory",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "androidmapdirectory",
+    "scheme": "mapdirectory",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -36,7 +36,13 @@
           }
         }
       ],
-      "expo-maps"
+      [
+        "expo-maps",
+        {
+          "requestLocationPermission": true,
+          "locationPermission": "Izinkan $(PRODUCT_NAME) menggunakan lokasimu untuk menampilkan unit terdekat."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

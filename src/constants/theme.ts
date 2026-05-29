@@ -44,14 +44,39 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/**
+ * Weight-specific font families. React Native does not synthesize weights from a
+ * single family on Android, so each weight maps to the matching loaded font face
+ * (see `@expo-google-fonts/*`, loaded in `src/app/_layout.tsx`).
+ */
+export const Font = {
+  sans: {
+    '400': 'PlusJakartaSans_400Regular',
+    '500': 'PlusJakartaSans_500Medium',
+    '600': 'PlusJakartaSans_600SemiBold',
+    '700': 'PlusJakartaSans_700Bold',
+    '800': 'PlusJakartaSans_800ExtraBold',
+  },
+  mono: {
+    '400': 'JetBrainsMono_400Regular',
+    '500': 'JetBrainsMono_500Medium',
+    '600': 'JetBrainsMono_600SemiBold',
+    '700': 'JetBrainsMono_700Bold',
+  },
+} as const;
+
+export type SansWeight = keyof typeof Font.sans;
+export type MonoWeight = keyof typeof Font.mono;
+
+/** Legacy single-family handles (kept for back-compat); prefer `Font` above. */
 export const Fonts = Platform.select({
   ios: {
-    sans: 'PlusJakartaSans-Regular',
-    mono: 'JetBrainsMono-Regular',
+    sans: Font.sans['400'],
+    mono: Font.mono['400'],
   },
   default: {
-    sans: 'PlusJakartaSans-Regular',
-    mono: 'JetBrainsMono-Regular',
+    sans: Font.sans['400'],
+    mono: Font.mono['400'],
   },
 });
 

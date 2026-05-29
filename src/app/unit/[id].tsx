@@ -1,0 +1,310 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { FloorBadge, PhotoSlot, StatusPill } from '@/components/atoms';
+import { Glyph, Icon } from '@/components/icons';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Radius, Spacing } from '@/constants/theme';
+import { UNITS, type SubRoom } from '@/constants/units';
+import { useTheme } from '@/hooks/use-theme';
+
+function CircleButton({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.topBtn, pressed && styles.pressed]}>
+      {children}
+    </Pressable>
+  );
+}
+
+function InfoRow({
+  icon,
+  label,
+  value,
+  mono = false,
+  accent = false,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  mono?: boolean;
+  accent?: boolean;
+}) {
+  const theme = useTheme();
+  const I = Icon[icon];
+  return (
+    <View style={[styles.infoRow, { borderColor: theme.hairline }]}>
+      <View style={[styles.infoIcon, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline }]}>
+        <I size={15} color={accent ? theme.routeInk : theme.textSecondary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <ThemedText type="monoTag" themeColor="ink3" style={{ letterSpacing: 1 }}>
+          {label}
+        </ThemedText>
+        <ThemedText type={mono ? 'code' : 'defaultSemiBold'} style={{ marginTop: 3, fontSize: 13 }}>
+          {value}
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+function SubRooms({ rooms }: { rooms: SubRoom[] }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.subWrap, { backgroundColor: theme.background, borderColor: theme.hairline }]}>
+      <View style={[styles.subHead, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline }]}>
+        <ThemedText type="caption" style={styles.extrabold}>
+          Ruangan di unit ini
+        </ThemedText>
+        <ThemedText type="monoMeta" themeColor="ink3" style={{ fontSize: 10 }}>
+          {rooms.length} ruang
+        </ThemedText>
+      </View>
+      {rooms.map((r, i) => (
+        <View
+          key={i}
+          style={[styles.subRow, i < rooms.length - 1 && { borderBottomWidth: 1, borderColor: theme.hairline }]}>
+          <ThemedText type="caption" style={styles.semibold}>
+            {r.name}
+          </ThemedText>
+          <ThemedText type="monoMeta" themeColor="routeInk" style={styles.semibold}>
+            {r.loc}
+          </ThemedText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function QuickAction({ tag, label, value }: { tag: string; label: string; value: string }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.quick, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+      <View style={[styles.quickTag, { backgroundColor: theme.backgroundElement }]}>
+        <ThemedText type="monoMeta" style={{ fontSize: 11 }}>
+          {tag}
+        </ThemedText>
+      </View>
+      <View style={{ flex: 1 }}>
+        <ThemedText type="monoTag" themeColor="ink3" style={{ letterSpacing: 0.8 }}>
+          {label}
+        </ThemedText>
+        <ThemedText type="caption" style={styles.bold} numberOfLines={1}>
+          {value}
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+export default function DetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const router = useRouter();
+
+  const unit = UNITS.find((u) => String(u.id) === String(id)) ?? UNITS[0];
+  const G = Glyph[unit.glyph];
+
+  return (
+    <ThemedView style={styles.container}>
+      <ScrollView contentContainerStyle={{ paddingBottom: Spacing.four }} showsVerticalScrollIndicator={false}>
+        {/* Hero */}
+        <View>
+          <View style={[styles.topBar, { top: insets.top + Spacing.one }]}>
+            <CircleButton onPress={() => router.back()}>
+              <View style={styles.flip}>
+                <Icon.chev size={16} color={theme.text} />
+              </View>
+            </CircleButton>
+            <View style={styles.topRight}>
+              <CircleButton>
+                <Icon.star size={15} color={theme.ink3} />
+              </CircleButton>
+              <CircleButton>
+                <ThemedText type="titleM">⋯</ThemedText>
+              </CircleButton>
+            </View>
+          </View>
+          <PhotoSlot height={240} radius={0} label={`foto · ${unit.building.toLowerCase()}`} />
+          <View style={styles.heroFloor}>
+            <FloorBadge building={unit.building} floor={unit.floor} />
+          </View>
+        </View>
+
+        {/* Body */}
+        <View style={[styles.gutter, { paddingTop: Spacing.four }]}>
+          <View style={styles.rowBetween}>
+            <View style={styles.catRow}>
+              <G size={13} color={theme.routeInk} />
+              <ThemedText type="monoTag" themeColor="routeInk" style={{ letterSpacing: 1.2 }}>
+                {unit.cat}
+              </ThemedText>
+            </View>
+            <View style={styles.ratingRow}>
+              <Icon.star size={13} color="#d99a3a" />
+              <ThemedText type="caption" style={styles.bold}>
+                {unit.rating}
+              </ThemedText>
+              <ThemedText type="caption" themeColor="ink3">
+                · 124 ulasan
+              </ThemedText>
+            </View>
+          </View>
+
+          <ThemedText type="display" style={{ fontSize: 22, marginTop: Spacing.one }}>
+            {unit.name}
+          </ThemedText>
+
+          <View style={[styles.metaRow, { marginTop: Spacing.two }]}>
+            <StatusPill status={unit.status} />
+            <View style={[styles.tinyDot, { backgroundColor: theme.ink3 }]} />
+            <ThemedText type="caption" themeColor="textSecondary">
+              <ThemedText type="code" style={{ color: theme.text }}>
+                {unit.dist} {unit.distUnit}
+              </ThemedText>{' '}
+              dari kamu
+            </ThemedText>
+            <View style={[styles.tinyDot, { backgroundColor: theme.ink3 }]} />
+            <ThemedText type="code" themeColor="textSecondary">
+              ~3 menit
+            </ThemedText>
+          </View>
+
+          {unit.desc ? (
+            <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: Spacing.three, lineHeight: 21 }}>
+              {unit.desc}
+            </ThemedText>
+          ) : null}
+
+          <View style={{ marginTop: Spacing.three }}>
+            <InfoRow icon="pin" label="Lokasi" value={`${unit.building} · ${unit.floor}`} accent />
+            <InfoRow icon="info" label="Alamat" value={unit.addr} />
+            <InfoRow icon="star" label="Jam Layanan" value={unit.hours} mono />
+            <InfoRow icon="locate" label="Koordinat" value="−7.27543, 112.79742" mono />
+          </View>
+
+          {unit.sub ? (
+            <View style={{ marginTop: Spacing.four }}>
+              <SubRooms rooms={unit.sub} />
+            </View>
+          ) : null}
+
+          <View style={styles.quickGrid}>
+            <QuickAction tag="SMS" label="Kontak" value="+62 31 594 1234" />
+            <QuickAction tag="WEB" label="Situs" value="ti.kampus.ac.id" />
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Sticky CTA */}
+      <View
+        style={[
+          styles.cta,
+          { backgroundColor: theme.background, borderColor: theme.hairline, paddingBottom: insets.bottom + Spacing.three },
+        ]}>
+        <View style={[styles.ctaPin, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>
+          <Icon.pin size={18} color={theme.text} />
+        </View>
+        <View style={[styles.ctaButton, { backgroundColor: theme.route }]}>
+          <Icon.map size={18} color="#fff" />
+          <ThemedText type="titleM" style={{ color: '#fff' }}>
+            Buka Rute · {unit.dist} {unit.distUnit}
+          </ThemedText>
+        </View>
+      </View>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  gutter: { paddingHorizontal: Spacing.four },
+  bold: { fontWeight: '700' },
+  semibold: { fontWeight: '600' },
+  extrabold: { fontWeight: '800' },
+  pressed: { opacity: 0.7 },
+  flip: { transform: [{ rotate: '180deg' }] },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
+  topBar: {
+    position: 'absolute',
+    left: Spacing.four,
+    right: Spacing.four,
+    zIndex: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  topRight: { flexDirection: 'row', gap: Spacing.two },
+  topBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(20,30,25,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroFloor: { position: 'absolute', bottom: 18, left: Spacing.four },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, flexWrap: 'wrap' },
+  tinyDot: { width: 3, height: 3, borderRadius: 999 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three, paddingVertical: Spacing.three, borderBottomWidth: 1 },
+  infoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subWrap: { borderRadius: Radius.md, borderWidth: 1, overflow: 'hidden' },
+  subHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+    borderBottomWidth: 1,
+  },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  quickGrid: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.four },
+  quick: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+  },
+  quickTag: { width: 30, height: 30, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+  cta: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
+    borderTopWidth: 1,
+  },
+  ctaPin: { width: 48, height: 48, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  ctaButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: Radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+  },
+});
