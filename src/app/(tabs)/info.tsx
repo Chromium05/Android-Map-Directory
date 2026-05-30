@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { CATEGORIES, CATEGORY_DESC, UNITS, type Category } from '@/constants/units';
+import { useAuth } from '@/contexts/auth';
 import { useTheme } from '@/hooks/use-theme';
 
 function BrandCard() {
@@ -147,7 +147,7 @@ function ActionRow({
 export default function InfoScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const router = useRouter();
+  const { signOut } = useAuth();
 
   const counts: Record<string, number> = {};
   UNITS.forEach((u) => {
@@ -209,7 +209,7 @@ export default function InfoScreen() {
             </ThemedText>
             <View
               style={[styles.group, styles.groupClip, { backgroundColor: theme.background, borderColor: theme.hairline }]}>
-              <ActionRow label="Masuk ke akun" sub="Login mahasiswa / staf" icon="pinFill" onPress={() => router.push('/login')} />
+              <ActionRow label="Keluar" sub="Hapus sesi & kembali ke login" icon="pinFill" onPress={signOut} />
               <ActionRow label="Bantuan & FAQ" sub="Cara pakai, izin GPS, masalah umum" icon="info" />
               <ActionRow label="Berikan masukan" sub="Kirim saran atau laporkan data salah" icon="star" />
               <ActionRow label="Sumber data" sub="BAA & Pusat Sistem Informasi" icon="pin" />

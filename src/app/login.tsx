@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import { Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Font, Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth';
 import { useTheme } from '@/hooks/use-theme';
 
 type Role = 'mahasiswa' | 'admin';
@@ -68,14 +70,39 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
+  const { signIn } = useAuth();
 
   const [role, setRole] = useState<Role>('mahasiswa');
-  const [email, setEmail] = useState('5025221042@student.kampus.ac.id');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const enter = () => router.back();
+  const enter = async () => {
+    setErrorMsg('');
+
+    if (!email.trim()) {
+      setErrorMsg('Email tidak boleh kosong.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Kata sandi tidak boleh kosong.');
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await signIn(email.trim(), password);
+    setIsLoading(false);
+
+    if (error) {
+      setErrorMsg('Email atau kata sandi salah.');
+      return;
+    }
+
+    // Route guard in _layout.tsx handles the redirect after successful login
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -94,11 +121,9 @@ export default function LoginScreen() {
                 Direktori · Kampus
               </ThemedText>
             </View>
-            <Pressable onPress={() => router.back()} hitSlop={8}>
-              <ThemedText type="caption" themeColor="textSecondary" style={styles.bold}>
-                Bantuan
-              </ThemedText>
-            </Pressable>
+            <ThemedText type="caption" themeColor="textSecondary" style={styles.bold}>
+              Bantuan
+            </ThemedText>
           </View>
 
           {/* Brand */}
@@ -172,6 +197,12 @@ export default function LoginScreen() {
               }
             />
 
+            {errorMsg ? (
+              <ThemedText type="caption" style={{ color: '#c0392b' }}>
+                {errorMsg}
+              </ThemedText>
+            ) : null}
+
             <View style={styles.rowBetween}>
               <Pressable onPress={() => setRemember((v) => !v)} style={styles.remember} hitSlop={8}>
                 <View
@@ -194,12 +225,21 @@ export default function LoginScreen() {
             </View>
 
             {/* Primary CTA */}
-            <Pressable onPress={enter} style={({ pressed }) => pressed && styles.pressed}>
+            <Pressable
+              onPress={enter}
+              disabled={isLoading}
+              style={({ pressed }) => (pressed || isLoading) && styles.pressed}>
               <View style={[styles.cta, { backgroundColor: theme.route }]}>
-                <ThemedText type="titleM" style={{ color: '#fff', fontSize: 15 }}>
-                  Masuk
-                </ThemedText>
-                <Icon.arrow size={16} color="#fff" />
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <ThemedText type="titleM" style={{ color: '#fff', fontSize: 15 }}>
+                      Masuk
+                    </ThemedText>
+                    <Icon.arrow size={16} color="#fff" />
+                  </>
+                )}
               </View>
             </Pressable>
 
@@ -212,8 +252,8 @@ export default function LoginScreen() {
               <View style={[styles.divider, { backgroundColor: theme.hairline }]} />
             </View>
 
-            {/* SSO */}
-            <Pressable onPress={enter} style={({ pressed }) => pressed && styles.pressed}>
+            {/* SSO — TODO: wire OAuth provider login */}
+            <Pressable disabled style={styles.pressed}>
               <View style={[styles.sso, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
                 <View style={[styles.ssoMark, { backgroundColor: theme.text }]}>
                   <ThemedText type="monoMeta" style={{ color: theme.background, fontSize: 11 }}>
