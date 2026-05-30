@@ -102,7 +102,9 @@ function CategoryRow({ c, count, last }: { c: Category; count: number; last: boo
           {CATEGORY_DESC[c.id] ?? '—'}
         </ThemedText>
       </View>
-      <Icon.chev size={14} color={theme.ink3} />
+      <View style={{ marginTop: 12 }}>
+        <Icon.chev size={14} color={theme.ink3} />
+      </View>
     </View>
   );
 }
@@ -111,12 +113,14 @@ function ActionRow({
   label,
   sub,
   icon,
+  mono,
   last,
   onPress,
 }: {
   label: string;
   sub?: string;
   icon: string;
+  mono?: boolean;
   last?: boolean;
   onPress?: () => void;
 }) {
@@ -133,7 +137,10 @@ function ActionRow({
             {label}
           </ThemedText>
           {sub ? (
-            <ThemedText type="caption" themeColor="ink3" style={{ fontSize: 11, marginTop: 1 }}>
+            <ThemedText
+              type={mono ? 'monoMeta' : 'caption'}
+              themeColor="ink3"
+              style={{ fontSize: 11, marginTop: 1 }}>
               {sub}
             </ThemedText>
           ) : null}
@@ -213,7 +220,7 @@ export default function InfoScreen() {
               <ActionRow label="Bantuan & FAQ" sub="Cara pakai, izin GPS, masalah umum" icon="info" />
               <ActionRow label="Berikan masukan" sub="Kirim saran atau laporkan data salah" icon="star" />
               <ActionRow label="Sumber data" sub="BAA & Pusat Sistem Informasi" icon="pin" />
-              <ActionRow label="Versi aplikasi" sub="1.0.0 · build 2026.05.17" icon="sliders" last />
+              <ActionRow label="Versi aplikasi" sub="1.0.0 · build 2026.05.17" icon="sliders" mono last />
             </View>
           </View>
 
@@ -249,7 +256,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  brandHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.four },
+  brandHead: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 },
   brandTile: {
     width: 54,
     height: 54,
@@ -258,23 +265,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   versionTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
-  brandBody: { padding: Spacing.four, borderTopWidth: 1 },
+  brandBody: { paddingTop: 12, paddingHorizontal: 18, paddingBottom: Spacing.four, borderTopWidth: 1 },
   statRow: { flexDirection: 'row', gap: Spacing.two },
-  statCard: { flex: 1, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 1, gap: 4 },
+  statCard: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: Radius.md, borderWidth: 1, gap: 4 },
   statLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.2 },
   statValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   dataHealth: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    padding: Spacing.three,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: Radius.md,
     borderWidth: 1,
   },
   checkCircle: { width: 32, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   group: { borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: Spacing.four },
   groupClip: { paddingHorizontal: 0, overflow: 'hidden' },
-  catRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three, paddingVertical: Spacing.four },
+  catRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three, paddingVertical: 14 },
   catGlyph: {
     width: 40,
     height: 40,
@@ -288,8 +296,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.four,
+    paddingVertical: 14,
   },
-  actionIcon: { width: 32, height: 32, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+  actionIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   footer: { textAlign: 'center', fontSize: 10, lineHeight: 16, marginTop: Spacing.one },
 });
