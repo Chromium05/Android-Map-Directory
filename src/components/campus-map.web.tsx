@@ -1,8 +1,6 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
 
-import { Icon } from '@/components/icons';
-import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import CampusPlan from '@/components/campus-plan';
 
 export type CampusMapMarker = {
   id: string;
@@ -15,27 +13,22 @@ export type CampusMapProps = {
   markers: CampusMapMarker[];
   center: { latitude: number; longitude: number };
   zoom?: number;
+  selectedId?: string;
   onMarkerClick?: (id: string) => void;
   style?: ViewStyle;
 };
 
 /**
- * Web fallback — expo-maps renders only on Android/iOS. Shows a styled
- * placeholder so the Peta screen layout still composes on web.
+ * Web — expo-maps is Android/iOS only. Renders the SVG campus plan with
+ * interactive pins so the Peta screen is fully functional on web.
  */
-export default function CampusMap({ markers, style }: CampusMapProps) {
-  const theme = useTheme();
+export default function CampusMap({ markers, selectedId, onMarkerClick, style }: CampusMapProps) {
   return (
-    <View style={[styles.wrap, { backgroundColor: theme.backgroundSelected }, style]}>
-      <Icon.map size={28} color={theme.ink3} />
-      <ThemedText type="monoMeta" themeColor="ink3" style={styles.label}>
-        peta · {markers.length} unit · android & ios
-      </ThemedText>
-    </View>
+    <CampusPlan
+      visibleIds={markers.map((m) => Number(m.id))}
+      selectedId={selectedId !== undefined ? Number(selectedId) : undefined}
+      onPinPress={(id) => onMarkerClick?.(String(id))}
+      style={style}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', justifyContent: 'center', gap: 8 },
-  label: { textTransform: 'uppercase', letterSpacing: 1 },
-});

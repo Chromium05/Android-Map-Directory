@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { Platform, Text, View, type ViewStyle } from 'react-native';
+import { Platform, type ViewStyle } from 'react-native';
+
+import CampusPlan from '@/components/campus-plan';
 
 export type CampusMapMarker = {
   id: string;
@@ -12,6 +14,7 @@ export type CampusMapProps = {
   markers: CampusMapMarker[];
   center: { latitude: number; longitude: number };
   zoom?: number;
+  selectedId?: string;
   onMarkerClick?: (id: string) => void;
   style?: ViewStyle;
 };
@@ -71,22 +74,21 @@ function NativeCampusMap({ markers, center, zoom = 16, onMarkerClick, style }: C
   );
 }
 
-function MapPlaceholder({ style }: { style?: ViewStyle }) {
-  return (
-    <View style={[{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f1eb' }, style]}>
-      <Text style={{ fontSize: 13, color: '#838c87', textAlign: 'center', lineHeight: 20, paddingHorizontal: 32 }}>
-        Peta membutuhkan development build.{'\n'}Jalankan dengan Expo Dev Client.
-      </Text>
-    </View>
-  );
-}
-
 /**
  * Native campus map backed by expo-maps (Google Maps on Android, Apple Maps on
- * iOS). Falls back to a placeholder when the native module isn't available
+ * iOS). Falls back to the SVG campus plan when the native module isn't available
  * (e.g. Expo Go or missing pod install).
  */
 export default function CampusMap(props: CampusMapProps) {
-  if (!Maps) return <MapPlaceholder style={props.style} />;
+  if (!Maps) {
+    return (
+      <CampusPlan
+        visibleIds={props.markers.map((m) => Number(m.id))}
+        selectedId={props.selectedId !== undefined ? Number(props.selectedId) : undefined}
+        onPinPress={(id) => props.onMarkerClick?.(String(id))}
+        style={props.style}
+      />
+    );
+  }
   return <NativeCampusMap {...props} />;
 }

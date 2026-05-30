@@ -87,6 +87,7 @@ export default function MapScreen() {
           markers={markers}
           center={CAMPUS_CENTER}
           zoom={16}
+          selectedId={String(selectedId)}
           onMarkerClick={(id) => setSelectedId(Number(id))}
         />
 

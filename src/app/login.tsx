@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
@@ -19,7 +20,29 @@ import { Font, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth';
 import { useTheme } from '@/hooks/use-theme';
 
-type Role = 'mahasiswa' | 'admin';
+// Official Google "G" mark — used for the Sign-in-with-Google button.
+function GoogleG({ size = 18 }: { size?: number }) {
+  return (
+    <Svg viewBox="0 0 48 48" width={size} height={size}>
+      <Path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <Path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <Path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </Svg>
+  );
+}
 
 function Field({
   label,
@@ -70,15 +93,15 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
-  const [role, setRole] = useState<Role>('mahasiswa');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const enter = async () => {
     setErrorMsg('');
@@ -101,7 +124,7 @@ export default function LoginScreen() {
       return;
     }
 
-    // Route guard in _layout.tsx handles the redirect after successful login
+    // Route guard in _layout.tsx handles redirect after successful login
   };
 
   return (
@@ -111,7 +134,8 @@ export default function LoginScreen() {
           contentContainerStyle={{ paddingTop: insets.top + Spacing.two, paddingBottom: Spacing.six }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          {/* Top strip */}
+
+          {/* Top strip — green live dot + "Direktori · Kampus" eyebrow + Bantuan */}
           <View style={[styles.gutter, styles.rowBetween]}>
             <View style={styles.eyebrow}>
               <View style={[styles.eyebrowRing, { backgroundColor: theme.route + '38' }]}>
@@ -126,50 +150,29 @@ export default function LoginScreen() {
             </ThemedText>
           </View>
 
-          {/* Brand */}
+          {/* Brand block — ink tile, display headline, subtitle */}
           <View style={[styles.gutter, { marginTop: Spacing.five }]}>
             <View style={[styles.brandTile, { backgroundColor: theme.text }]}>
               <Icon.pinFill size={28} color={theme.route} />
             </View>
             <ThemedText type="display" style={{ fontSize: 28, marginTop: Spacing.five }}>
-              Masuk untuk lihat unit di kampusmu.
+              {'Masuk untuk lihat\nunit di kampusmu.'}
             </ThemedText>
             <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: Spacing.two, maxWidth: 300 }}>
-              Pakai akun SSO kampus. Sesi tersimpan di perangkat ini.
+              Pakai akun Google kampusmu. Sesi tersimpan di perangkat ini.
             </ThemedText>
           </View>
 
-          {/* Role segment */}
+          {/* Role badge — mobile is student-only */}
           <View style={[styles.gutter, { marginTop: Spacing.five }]}>
-            <View style={[styles.segment, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline }]}>
-              {(['mahasiswa', 'admin'] as Role[]).map((r) => {
-                const active = role === r;
-                return (
-                  <Pressable
-                    key={r}
-                    onPress={() => setRole(r)}
-                    style={[
-                      styles.segmentItem,
-                      active && {
-                        backgroundColor: theme.background,
-                        borderColor: theme.hairline2,
-                        borderWidth: 1,
-                        shadowColor: '#141e19',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.05,
-                        shadowRadius: 2,
-                        elevation: 1,
-                      },
-                    ]}>
-                    <ThemedText
-                      type="caption"
-                      themeColor={active ? 'text' : 'textSecondary'}
-                      style={active ? styles.bold : undefined}>
-                      {r === 'mahasiswa' ? 'Mahasiswa' : 'Admin / Staf'}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
+            <View style={[styles.roleBadge, {
+              backgroundColor: theme.routeTint,
+              borderColor: theme.route + '4D',
+            }]}>
+              <Icon.pinFill size={13} color={theme.routeInk} />
+              <ThemedText type="caption" style={[styles.bold, { color: theme.routeInk }]}>
+                Khusus akun mahasiswa
+              </ThemedText>
             </View>
           </View>
 
@@ -252,17 +255,22 @@ export default function LoginScreen() {
               <View style={[styles.divider, { backgroundColor: theme.hairline }]} />
             </View>
 
-            {/* SSO — TODO: wire OAuth provider login */}
-            <Pressable disabled style={styles.pressed}>
+            {/* Google OAuth */}
+            <Pressable
+              onPress={async () => {
+                setErrorMsg('');
+                setIsGoogleLoading(true);
+                const { error } = await signInWithGoogle();
+                setIsGoogleLoading(false);
+                if (error) setErrorMsg('Login Google gagal. Coba lagi.');
+              }}
+              disabled={isGoogleLoading || isLoading}
+              style={({ pressed }) => (pressed || isGoogleLoading) && styles.pressed}>
               <View style={[styles.sso, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
-                <View style={[styles.ssoMark, { backgroundColor: theme.text }]}>
-                  <ThemedText type="monoMeta" style={{ color: theme.background, fontSize: 11 }}>
-                    K
-                  </ThemedText>
-                </View>
-                <ThemedText type="caption" style={styles.bold}>
-                  Lanjut dengan SSO Kampus
-                </ThemedText>
+                {isGoogleLoading
+                  ? <ActivityIndicator size="small" color={theme.text} />
+                  : <><GoogleG size={18} /><ThemedText type="caption" style={styles.bold}>Login dengan akun Google</ThemedText></>
+                }
               </View>
             </Pressable>
           </View>
@@ -270,12 +278,14 @@ export default function LoginScreen() {
 
         {/* Footer */}
         <View style={[styles.footer, styles.gutter, { borderColor: theme.hairline, paddingBottom: insets.bottom + Spacing.three }]}>
-          <ThemedText type="caption" themeColor="textSecondary">
-            Belum punya akun?{' '}
-            <ThemedText type="caption" style={styles.bold}>
-              Daftar
+          <Pressable onPress={() => router.push('/register' as never)} hitSlop={8}>
+            <ThemedText type="caption" themeColor="textSecondary">
+              Belum punya akun?{' '}
+              <ThemedText type="caption" style={styles.bold}>
+                Daftar
+              </ThemedText>
             </ThemedText>
-          </ThemedText>
+          </Pressable>
           <ThemedText type="monoMeta" themeColor="ink3" style={{ fontSize: 10 }}>
             v1.0.0
           </ThemedText>
@@ -295,15 +305,27 @@ const styles = StyleSheet.create({
   eyebrowRing: { width: 12, height: 12, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   eyebrowDot: { width: 6, height: 6, borderRadius: 999 },
   brandTile: {
-    width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#141e19',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  segment: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: 12, borderWidth: 1 },
-  segmentItem: { flex: 1, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  roleBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
   fieldLabel: { letterSpacing: 1.4, marginBottom: 6, fontSize: 10 },
   field: {
     flexDirection: 'row',
@@ -342,7 +364,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.three,
   },
-  ssoMark: { width: 22, height: 22, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',

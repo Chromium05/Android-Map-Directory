@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategoryChip, Distance, FloorBadge, PhotoSlot, StatusPill } from '@/components/atoms';
+import { FilterSheet, SearchOverlay } from '@/components/home-search';
 import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,18 +12,25 @@ import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { byDistance, CATEGORIES, UNITS, type Unit } from '@/constants/units';
 import { useTheme } from '@/hooks/use-theme';
 
-function SearchBar() {
+// Tapping the search bar body opens the search overlay.
+// Tapping the sliders button opens the filter sheet directly.
+function SearchBar({ onPress, onFilterPress }: { onPress: () => void; onFilterPress: () => void }) {
   const theme = useTheme();
   return (
-    <View style={[styles.searchBar, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline }]}>
-      <Icon.search size={18} color={theme.textSecondary} />
-      <ThemedText type="body" themeColor="ink3" style={{ flex: 1 }}>
-        Cari unit, gedung, atau lantai
-      </ThemedText>
-      <View style={[styles.searchSliders, { backgroundColor: theme.background, borderColor: theme.hairline }]}>
-        <Icon.sliders size={16} color={theme.textSecondary} />
+    <Pressable onPress={onPress}>
+      <View style={[styles.searchBar, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline }]}>
+        <Icon.search size={18} color={theme.textSecondary} />
+        <ThemedText type="body" themeColor="ink3" style={{ flex: 1 }}>
+          Cari unit, gedung, atau lantai
+        </ThemedText>
+        <Pressable
+          onPress={(e) => { e.stopPropagation(); onFilterPress(); }}
+          hitSlop={8}
+          style={[styles.searchSliders, { backgroundColor: theme.background, borderColor: theme.hairline }]}>
+          <Icon.sliders size={16} color={theme.textSecondary} />
+        </Pressable>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -132,52 +140,66 @@ function UnitRow({ unit, last, onPress }: { unit: Unit; last: boolean; onPress: 
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const theme = useTheme();
   const router = useRouter();
 
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const openSearch = () => setSearchOpen(true);
+  const closeSearch = () => { setSearchOpen(false); setQuery(''); };
+  const openFilter = () => { setSearchOpen(false); setQuery(''); setFilterOpen(true); };
+  const closeFilter = () => setFilterOpen(false);
+
+  const applyFilter = (category: string) => setActiveCategory(category);
+
   const sorted = [...UNITS].sort(byDistance);
-  const featured = sorted[0];
-  const rest = sorted.slice(1, 4);
+  const visible = activeCategory === 'all'
+    ? sorted
+    : sorted.filter((u) => u.cat === activeCategory);
+  const featured = visible[0];
+  const rest = visible.slice(1, 4);
   const go = (id: number) => router.push(`/unit/${id}`);
 
   return (
     <ThemedView style={styles.container}>
       <ScrollView
+        scrollEnabled={!searchOpen && !filterOpen}
         contentContainerStyle={{
           paddingTop: insets.top + Spacing.two,
           paddingBottom: BottomTabInset + Spacing.four,
         }}
         showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, styles.gutter]}>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="monoTag" themeColor="textSecondary">
-              Direktori · Kampus
-            </ThemedText>
-            <ThemedText type="display" style={{ marginTop: Spacing.one }}>
-              Mau ke unit mana hari ini?
-            </ThemedText>
-          </View>
-          <View style={[styles.avatar, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>
-            <ThemedText type="defaultSemiBold">R</ThemedText>
-          </View>
+        <View style={styles.gutter}>
+          <ThemedText type="monoTag" themeColor="textSecondary">
+            Direktori · Kampus
+          </ThemedText>
+          <ThemedText type="display" style={{ marginTop: Spacing.one }}>
+            {'Mau ke unit mana\nhari ini?'}
+          </ThemedText>
         </View>
 
-        {/* Body */}
+        {/* Search + status */}
         <View style={[styles.gutter, { gap: Spacing.three, marginTop: Spacing.three }]}>
-          <SearchBar />
+          <SearchBar onPress={openSearch} onFilterPress={openFilter} />
           <StatusStrip />
         </View>
 
+        {/* Category chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={[styles.chipRow, styles.gutter]}>
           {CATEGORIES.map((c) => (
-            <CategoryChip key={c.id} label={c.label} glyph={c.glyph} active={c.id === 'Departemen'} />
+            <Pressable key={c.id} onPress={() => setActiveCategory(c.id)}>
+              <CategoryChip label={c.label} glyph={c.glyph} active={c.id === activeCategory} />
+            </Pressable>
           ))}
         </ScrollView>
 
+        {/* List header */}
         <View style={[styles.gutter, styles.rowBetween, { marginTop: Spacing.one }]}>
           <ThemedText type="titleL">Terdekat dari kamu</ThemedText>
           <ThemedText type="monoMeta" themeColor="textSecondary">
@@ -185,15 +207,38 @@ export default function HomeScreen() {
           </ThemedText>
         </View>
 
-        <View style={[styles.gutter, { marginTop: Spacing.three }]}>
-          <FeaturedCard unit={featured} onPress={() => go(featured.id)} />
-          <View style={{ marginTop: Spacing.two }}>
-            {rest.map((u, i) => (
-              <UnitRow key={u.id} unit={u} last={i === rest.length - 1} onPress={() => go(u.id)} />
-            ))}
+        {/* Unit list */}
+        {featured ? (
+          <View style={[styles.gutter, { marginTop: Spacing.three }]}>
+            <FeaturedCard unit={featured} onPress={() => go(featured.id)} />
+            <View style={{ marginTop: Spacing.two }}>
+              {rest.map((u, i) => (
+                <UnitRow key={u.id} unit={u} last={i === rest.length - 1} onPress={() => go(u.id)} />
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
       </ScrollView>
+
+      {/* Search overlay — absolute sibling, NOT a navigation push */}
+      {searchOpen && (
+        <SearchOverlay
+          query={query}
+          onQueryChange={setQuery}
+          onClose={closeSearch}
+          onOpenFilter={openFilter}
+          onSelectUnit={(id) => { closeSearch(); go(id); }}
+        />
+      )}
+
+      {/* Filter bottom sheet */}
+      {filterOpen && (
+        <FilterSheet
+          initialCategory={activeCategory}
+          onClose={closeFilter}
+          onApply={applyFilter}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -213,15 +258,6 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   inlineRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   inlineRowTight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
