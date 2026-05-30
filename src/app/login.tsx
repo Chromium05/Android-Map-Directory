@@ -26,6 +26,7 @@ function Field({
   placeholder,
   mono = false,
   secure = false,
+  leading,
   trailing,
 }: {
   label: string;
@@ -34,6 +35,7 @@ function Field({
   placeholder?: string;
   mono?: boolean;
   secure?: boolean;
+  leading?: React.ReactNode;
   trailing?: React.ReactNode;
 }) {
   const theme = useTheme();
@@ -43,6 +45,7 @@ function Field({
         {label}
       </ThemedText>
       <View style={[styles.field, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+        {leading}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -84,7 +87,9 @@ export default function LoginScreen() {
           {/* Top strip */}
           <View style={[styles.gutter, styles.rowBetween]}>
             <View style={styles.eyebrow}>
-              <View style={[styles.eyebrowDot, { backgroundColor: theme.route }]} />
+              <View style={[styles.eyebrowRing, { backgroundColor: theme.route + '38' }]}>
+                <View style={[styles.eyebrowDot, { backgroundColor: theme.route }]} />
+              </View>
               <ThemedText type="monoTag" themeColor="ink3">
                 Direktori · Kampus
               </ThemedText>
@@ -120,7 +125,16 @@ export default function LoginScreen() {
                     onPress={() => setRole(r)}
                     style={[
                       styles.segmentItem,
-                      active && { backgroundColor: theme.background, borderColor: theme.hairline2, borderWidth: 1 },
+                      active && {
+                        backgroundColor: theme.background,
+                        borderColor: theme.hairline2,
+                        borderWidth: 1,
+                        shadowColor: '#141e19',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 2,
+                        elevation: 1,
+                      },
                     ]}>
                     <ThemedText
                       type="caption"
@@ -141,6 +155,7 @@ export default function LoginScreen() {
               value={email}
               onChangeText={setEmail}
               mono
+              leading={<Icon.info size={14} color={theme.ink3} />}
             />
             <Field
               label="Kata sandi"
@@ -237,8 +252,16 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  eyebrowRing: { width: 12, height: 12, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   eyebrowDot: { width: 6, height: 6, borderRadius: 999 },
-  brandTile: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  brandTile: {
+    width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#141e19',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
   segment: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: 12, borderWidth: 1 },
   segmentItem: { flex: 1, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   fieldLabel: { letterSpacing: 1.4, marginBottom: 6, fontSize: 10 },
@@ -262,6 +285,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.two,
+    shadowColor: '#005a37',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, marginVertical: Spacing.one },
   divider: { flex: 1, height: 1 },
