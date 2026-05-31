@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategoryChip, Distance, FloorBadge, StatusPill } from '@/components/atoms';
@@ -9,8 +9,11 @@ import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
-import { CAMPUS_CENTER, CATEGORIES, UNITS, unitGeo } from '@/constants/units';
+import { CAMPUS_CENTER } from '@/constants/units';
 import { useTheme } from '@/hooks/use-theme';
+import { getCategories, getUnits } from '@/services/api';
+import type { Category, Unit } from '@/types/database';
+import { formatDistance, getDistanceKm } from '@/utils/distance';
 
 function HeaderBtn({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
@@ -29,8 +32,12 @@ function FloatingActions() {
   return (
     <View style={styles.fabColumn} pointerEvents="box-none">
       {btn(<Icon.locate size={18} color={theme.routeInk} />)}
-      {btn(<Icon.plus size={18} color={theme.text} />)}
-      {btn(<Icon.minus size={18} color={theme.text} />)}
+      <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+        <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>+</ThemedText>
+      </View>
+      <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+        <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>-</ThemedText>
+      </View>
     </View>
   );
 }
@@ -40,25 +47,81 @@ export default function MapScreen() {
   const theme = useTheme();
   const router = useRouter();
 
-  const [activeCat, setActiveCat] = useState('Departemen');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [activeCat, setActiveCat] = useState('all');
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Dummy user location
+  const userLocation = CAMPUS_CENTER;
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [cats, allUnits] = await Promise.all([getCategories(), getUnits()]);
+      setCategories(cats);
+      setUnits(allUnits);
+      if (allUnits.length > 0) setSelectedId(allUnits[0].id);
+    } catch (err: any) {
+      setError(err.message || 'Gagal memuat data peta');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const visible = useMemo(
-    () => (activeCat === 'all' ? UNITS : UNITS.filter((u) => u.cat === activeCat)),
-    [activeCat]
+    () => (activeCat === 'all' ? units : units.filter((u) => u.categories?.name === activeCat)),
+    [activeCat, units]
   );
-  const [selectedId, setSelectedId] = useState<number>(1);
-  const selected = visible.find((u) => u.id === selectedId) ?? visible[0] ?? UNITS[0];
+  
+  const selected = useMemo(
+    () => units.find((u) => u.id === selectedId) || units[0],
+    [selectedId, units]
+  );
 
   const markers = useMemo(
     () =>
       visible.map((u) => ({
         id: String(u.id),
-        title: u.short,
-        ...unitGeo(u.coord),
+        title: u.short_name,
+        latitude: Number(u.latitude),
+        longitude: Number(u.longitude),
       })),
     [visible]
   );
 
-  const SelGlyph = Glyph[selected.glyph];
+  if (loading) {
+    return (
+      <ThemedView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={theme.route} />
+        <ThemedText type="caption" style={{ marginTop: Spacing.two }}>Memuat peta...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={[styles.container, styles.center]}>
+        <Icon.info size={48} color={theme.closed} />
+        <ThemedText type="titleM" style={{ marginTop: Spacing.two }}>{error}</ThemedText>
+        <Pressable onPress={fetchInitialData} style={[styles.retryBtn, { backgroundColor: theme.route }]}>
+          <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>Coba Lagi</ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
+  const SelGlyph = Glyph[selected?.categories?.glyph || 'dept'];
+  const distanceKm = selected ? getDistanceKm(userLocation.latitude, userLocation.longitude, Number(selected.latitude), Number(selected.longitude)) : 0;
+  const { value: dist, unit: distUnit } = formatDistance(distanceKm);
 
   return (
     <ThemedView style={styles.container}>
@@ -97,9 +160,12 @@ export default function MapScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.chipScroll}
           contentContainerStyle={styles.chipRow}>
-          {CATEGORIES.slice(0, 6).map((c) => (
-            <Pressable key={c.id} onPress={() => setActiveCat(c.id)}>
-              <CategoryChip label={c.label} glyph={c.glyph} active={c.id === activeCat} compact />
+          <Pressable onPress={() => setActiveCat('all')}>
+            <CategoryChip label="Semua" glyph="all" active={activeCat === 'all'} compact />
+          </Pressable>
+          {categories.map((c) => (
+            <Pressable key={c.id} onPress={() => setActiveCat(c.name)}>
+              <CategoryChip label={c.name} glyph={c.glyph} active={c.name === activeCat} compact />
             </Pressable>
           ))}
         </ScrollView>
@@ -107,57 +173,59 @@ export default function MapScreen() {
         <FloatingActions />
 
         {/* Bottom sheet */}
-        <View
-          style={[
-            styles.sheet,
-            { backgroundColor: theme.background, borderColor: theme.hairline, paddingBottom: BottomTabInset + Spacing.three },
-          ]}>
-          <View style={[styles.handle, { backgroundColor: theme.hairline2 }]} />
-          <View style={styles.sheetTop}>
-            <View style={[styles.sheetGlyph, { backgroundColor: theme.routeTint, borderColor: withAlpha(theme.route, 0.18) }]}>
-              <SelGlyph size={24} color={theme.routeInk} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={styles.rowBetween}>
-                <ThemedText type="monoTag" themeColor="ink3" style={{ letterSpacing: 0.8 }}>
-                  {selected.cat}
-                </ThemedText>
-                <Distance value={selected.dist} unit={selected.distUnit} />
+        {selected && (
+          <View
+            style={[
+              styles.sheet,
+              { backgroundColor: theme.background, borderColor: theme.hairline, paddingBottom: BottomTabInset + Spacing.three },
+            ]}>
+            <View style={[styles.handle, { backgroundColor: theme.hairline2 }]} />
+            <View style={styles.sheetTop}>
+              <View style={[styles.sheetGlyph, { backgroundColor: theme.routeTint, borderColor: withAlpha(theme.route, 0.18) }]}>
+                <SelGlyph size={24} color={theme.routeInk} />
               </View>
-              <ThemedText type="display" style={{ fontSize: 16, marginTop: 2 }}>
-                {selected.name}
-              </ThemedText>
-              <View style={styles.sheetMeta}>
-                <FloorBadge building={selected.building} floor={selected.floor} />
-                <StatusPill status={selected.status} />
-                <ThemedText type="monoMeta" themeColor="textSecondary">
-                  {selected.hours}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={styles.rowBetween}>
+                  <ThemedText type="monoTag" themeColor="ink3" style={{ letterSpacing: 0.8 }}>
+                    {selected.categories?.name}
+                  </ThemedText>
+                  <Distance value={dist} unit={distUnit} />
+                </View>
+                <ThemedText type="display" style={{ fontSize: 16, marginTop: 2 }}>
+                  {selected.name}
                 </ThemedText>
+                <View style={styles.sheetMeta}>
+                  <FloorBadge building={selected.buildings?.name || ''} floor={selected.floor} />
+                  <StatusPill status={selected.status} />
+                  <ThemedText type="monoMeta" themeColor="textSecondary">
+                    {selected.open_hours}
+                  </ThemedText>
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.sheetButtons}>
-            <Pressable
-              onPress={() => router.push(`/unit/${selected.id}`)}
-              style={({ pressed }) => [
-                styles.sheetBtn,
-                { backgroundColor: theme.background, borderColor: theme.hairline2, borderWidth: 1 },
-                pressed && styles.pressed,
-              ]}>
-              <Icon.info size={15} color={theme.text} />
-              <ThemedText type="caption" style={styles.bold}>
-                Detail
-              </ThemedText>
-            </Pressable>
-            <Pressable style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
-              <Icon.map size={15} color="#fff" />
-              <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>
-                Buka Rute
-              </ThemedText>
-            </Pressable>
+            <View style={styles.sheetButtons}>
+              <Pressable
+                onPress={() => router.push(`/unit/${selected.id}`)}
+                style={({ pressed }) => [
+                  styles.sheetBtn,
+                  { backgroundColor: theme.background, borderColor: theme.hairline2, borderWidth: 1 },
+                  pressed && styles.pressed,
+                ]}>
+                <Icon.info size={15} color={theme.text} />
+                <ThemedText type="caption" style={styles.bold}>
+                  Detail
+                </ThemedText>
+              </Pressable>
+              <Pressable style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
+                <Icon.map size={15} color="#fff" />
+                <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>
+                  Buka Rute
+                </ThemedText>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     </ThemedView>
   );
@@ -172,6 +240,7 @@ function withAlpha(hex: string, alpha: number) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  center: { alignItems: 'center', justifyContent: 'center' },
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.7 },
   rowBetween: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: Spacing.two },
@@ -240,4 +309,10 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   sheetBtnPrimary: { flex: 1.4 },
+  retryBtn: {
+    marginTop: Spacing.four,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.md,
+  },
 });

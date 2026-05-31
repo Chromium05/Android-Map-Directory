@@ -33,12 +33,14 @@ yarn-error.*
 # local env files
 .env
 .env*.local
+.env.example
+supabase_setup.sql
 
 # typescript
 *.tsbuildinfo
 
 app-example
 
-# generated native folders
+# generated native fdolders
 /ios
 /android
