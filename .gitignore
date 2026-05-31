@@ -42,5 +42,6 @@ supabase_setup.sql
 app-example
 
 # generated native fdolders
+# generated native fdolders
 /ios
 /android
