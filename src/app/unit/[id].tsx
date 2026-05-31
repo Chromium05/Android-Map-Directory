@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloorBadge, PhotoSlot, StatusPill } from '@/components/atoms';
@@ -8,8 +8,11 @@ import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
-import { UNITS, type SubRoom } from '@/constants/units';
+import { CAMPUS_CENTER } from '@/constants/units';
 import { useTheme } from '@/hooks/use-theme';
+import { getUnitDetail } from '@/services/api';
+import type { Unit, UnitRoom } from '@/types/database';
+import { formatDistance, getDistanceKm } from '@/utils/distance';
 
 function CircleButton({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
   return (
@@ -51,7 +54,7 @@ function InfoRow({
   );
 }
 
-function SubRooms({ rooms }: { rooms: SubRoom[] }) {
+function SubRooms({ rooms }: { rooms: UnitRoom[] }) {
   const theme = useTheme();
   return (
     <View style={[styles.subWrap, { backgroundColor: theme.background, borderColor: theme.hairline }]}>
@@ -71,7 +74,7 @@ function SubRooms({ rooms }: { rooms: SubRoom[] }) {
             {r.name}
           </ThemedText>
           <ThemedText type="monoMeta" themeColor="routeInk" style={styles.semibold}>
-            {r.loc}
+            {r.location}
           </ThemedText>
         </View>
       ))}
@@ -106,8 +109,56 @@ export default function DetailScreen() {
   const theme = useTheme();
   const router = useRouter();
 
-  const unit = UNITS.find((u) => String(u.id) === String(id)) ?? UNITS[0];
-  const G = Glyph[unit.glyph];
+  const [unit, setUnit] = useState<Unit | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Dummy user location
+  const userLocation = CAMPUS_CENTER;
+
+  useEffect(() => {
+    if (id) fetchDetail();
+  }, [id]);
+
+  const fetchDetail = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getUnitDetail(Number(id));
+      if (!data) throw new Error('Unit tidak ditemukan');
+      setUnit(data);
+    } catch (err: any) {
+      setError(err.message || 'Gagal memuat detail unit');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <ThemedView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={theme.route} />
+        <ThemedText type="caption" style={{ marginTop: Spacing.two }}>Memuat detail...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error || !unit) {
+    return (
+      <ThemedView style={[styles.container, styles.center]}>
+        <Icon.info size={48} color={theme.closed} />
+        <ThemedText type="titleM" style={{ marginTop: Spacing.two }}>{error || 'Unit tidak ditemukan'}</ThemedText>
+        <Pressable onPress={() => router.back()} style={[styles.retryBtn, { backgroundColor: theme.route }]}>
+          <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>Kembali</ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
+  const glyphName = unit.categories?.glyph || 'dept';
+  const G = Glyph[glyphName];
+  const distanceKm = getDistanceKm(userLocation.latitude, userLocation.longitude, Number(unit.latitude), Number(unit.longitude));
+  const { value: dist, unit: distUnit } = formatDistance(distanceKm);
 
   return (
     <ThemedView style={styles.container}>
@@ -129,9 +180,9 @@ export default function DetailScreen() {
               </CircleButton>
             </View>
           </View>
-          <PhotoSlot height={240} radius={0} label={`foto · ${unit.building.toLowerCase()}`} />
+          <PhotoSlot height={240} radius={0} label={`foto · ${unit.buildings?.name.toLowerCase() || 'tempat'}`} />
           <View style={styles.heroFloor}>
-            <FloorBadge building={unit.building} floor={unit.floor} />
+            <FloorBadge building={unit.buildings?.name || ''} floor={unit.floor} />
           </View>
         </View>
 
@@ -141,7 +192,7 @@ export default function DetailScreen() {
             <View style={styles.catRow}>
               <G size={13} color={theme.routeInk} />
               <ThemedText type="monoTag" themeColor="routeInk" style={{ letterSpacing: 1.2 }}>
-                {unit.cat}
+                {unit.categories?.name}
               </ThemedText>
             </View>
             <View style={styles.ratingRow}>
@@ -164,7 +215,7 @@ export default function DetailScreen() {
             <View style={[styles.tinyDot, { backgroundColor: theme.ink3 }]} />
             <ThemedText type="caption" themeColor="textSecondary">
               <ThemedText type="code" style={{ color: theme.text }}>
-                {unit.dist} {unit.distUnit}
+                {dist} {distUnit}
               </ThemedText>{' '}
               dari kamu
             </ThemedText>
@@ -174,22 +225,22 @@ export default function DetailScreen() {
             </ThemedText>
           </View>
 
-          {unit.desc ? (
+          {unit.description ? (
             <ThemedText type="body" themeColor="textSecondary" style={{ marginTop: Spacing.three, lineHeight: 21 }}>
-              {unit.desc}
+              {unit.description}
             </ThemedText>
           ) : null}
 
           <View style={{ marginTop: Spacing.three }}>
-            <InfoRow icon="pin" label="Lokasi" value={`${unit.building} · ${unit.floor}`} accent />
-            <InfoRow icon="info" label="Alamat" value={unit.addr} />
-            <InfoRow icon="star" label="Jam Layanan" value={unit.hours} mono />
-            <InfoRow icon="locate" label="Koordinat" value="−7.27543, 112.79742" mono />
+            <InfoRow icon="pin" label="Lokasi" value={`${unit.buildings?.name} · ${unit.floor}`} accent />
+            <InfoRow icon="info" label="Alamat" value={unit.address} />
+            <InfoRow icon="star" label="Jam Layanan" value={unit.open_hours} mono />
+            <InfoRow icon="locate" label="Koordinat" value={`${unit.latitude}, ${unit.longitude}`} mono />
           </View>
 
-          {unit.sub ? (
+          {unit.unit_rooms && unit.unit_rooms.length > 0 ? (
             <View style={{ marginTop: Spacing.four }}>
-              <SubRooms rooms={unit.sub} />
+              <SubRooms rooms={unit.unit_rooms} />
             </View>
           ) : null}
 
@@ -212,7 +263,7 @@ export default function DetailScreen() {
         <View style={[styles.ctaButton, { backgroundColor: theme.route }]}>
           <Icon.map size={18} color="#fff" />
           <ThemedText type="titleM" style={{ color: '#fff' }}>
-            Buka Rute · {unit.dist} {unit.distUnit}
+            Buka Rute · {dist} {distUnit}
           </ThemedText>
         </View>
       </View>
@@ -222,6 +273,7 @@ export default function DetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  center: { alignItems: 'center', justifyContent: 'center' },
   gutter: { paddingHorizontal: Spacing.four },
   bold: { fontWeight: '700' },
   semibold: { fontWeight: '600' },
@@ -306,5 +358,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.two,
+  },
+  retryBtn: {
+    marginTop: Spacing.four,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.md,
   },
 });
