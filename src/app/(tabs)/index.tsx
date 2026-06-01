@@ -9,11 +9,12 @@ import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
-import { CAMPUS_CENTER } from '@/constants/units';
+import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { openRoute } from '@/utils/navigation';
 
 // Tapping the search bar body opens the search overlay.
 // Tapping the sliders button opens the filter sheet directly.
@@ -37,8 +38,26 @@ function SearchBar({ onPress, onFilterPress }: { onPress: () => void; onFilterPr
   );
 }
 
-function StatusStrip() {
+function StatusStrip({ error }: { error?: string }) {
   const theme = useTheme();
+  const location = useLocation();
+
+  if (error || location.error) {
+    return (
+      <View style={[styles.statusStrip, { backgroundColor: theme.closed + '14', borderColor: theme.closed + '33' }]}>
+        <Icon.info size={16} color={theme.closed} />
+        <View style={{ flex: 1 }}>
+          <ThemedText type="caption" style={[styles.bold, { color: theme.closed }]}>
+            Masalah GPS
+          </ThemedText>
+          <ThemedText type="monoMeta" themeColor="textSecondary">
+            {error || location.error}
+          </ThemedText>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.statusStrip, { backgroundColor: theme.routeTint, borderColor: withAlpha(theme.route, 0.18) }]}>
       <Icon.locate size={16} color={theme.routeInk} />
@@ -47,12 +66,14 @@ function StatusStrip() {
           Lokasi kamu
         </ThemedText>
         <ThemedText type="monoMeta" themeColor="textSecondary">
-          Gedung Pusat · Lt. 1 · Lobi Utama
+          {location.loading ? 'Mencari lokasi...' : 'GPS Aktif · Akurasi Baik'}
         </ThemedText>
       </View>
-      <ThemedText type="caption" themeColor="routeInk" style={styles.bold}>
-        Ubah
-      </ThemedText>
+      {!location.loading && (
+        <ThemedText type="caption" themeColor="routeInk" style={styles.bold}>
+          Ubah
+        </ThemedText>
+      )}
     </View>
   );
 }
@@ -93,12 +114,14 @@ function FeaturedCard({ unit, userLat, userLng, onPress }: { unit: Unit; userLat
                 {unit.open_hours}
               </ThemedText>
             </View>
-            <View style={[styles.routeChip, { backgroundColor: theme.text }]}>
+            <Pressable 
+              onPress={(e) => { e.stopPropagation(); openRoute(Number(unit.latitude), Number(unit.longitude)); }}
+              style={[styles.routeChip, { backgroundColor: theme.text }]}>
               <ThemedText type="caption" style={[styles.bold, { color: theme.background }]}>
                 Buka rute
               </ThemedText>
               <Icon.arrow size={12} color={theme.background} />
-            </View>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -136,12 +159,14 @@ function UnitRow({ unit, userLat, userLng, last, onPress }: { unit: Unit; userLa
                 {unit.open_hours}
               </ThemedText>
             </View>
-            <View style={styles.inlineRowTight}>
+            <Pressable 
+              onPress={(e) => { e.stopPropagation(); openRoute(Number(unit.latitude), Number(unit.longitude)); }}
+              style={styles.inlineRowTight}>
               <ThemedText type="caption" themeColor="routeInk" style={styles.bold}>
                 Rute
               </ThemedText>
               <Icon.chev size={11} color={theme.routeInk} />
-            </View>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -153,6 +178,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const theme = useTheme();
+  const location = useLocation();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -163,9 +189,6 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<number | 'all'>('all');
-
-  // Dummy user location (centered at campus)
-  const userLocation = CAMPUS_CENTER;
 
   useEffect(() => {
     fetchInitialData();
@@ -200,8 +223,8 @@ export default function HomeScreen() {
   };
 
   const sorted = [...units].sort((a, b) => {
-    const distA = getDistanceKm(userLocation.latitude, userLocation.longitude, Number(a.latitude), Number(a.longitude));
-    const distB = getDistanceKm(userLocation.latitude, userLocation.longitude, Number(b.latitude), Number(b.longitude));
+    const distA = getDistanceKm(location.latitude, location.longitude, Number(a.latitude), Number(a.longitude));
+    const distB = getDistanceKm(location.latitude, location.longitude, Number(b.latitude), Number(b.longitude));
     return distA - distB;
   });
 
@@ -285,10 +308,10 @@ export default function HomeScreen() {
         {/* Unit list */}
         {featured ? (
           <View style={[styles.gutter, { marginTop: Spacing.three }]}>
-            <FeaturedCard unit={featured} userLat={userLocation.latitude} userLng={userLocation.longitude} onPress={() => go(featured.id)} />
+            <FeaturedCard unit={featured} userLat={location.latitude} userLng={location.longitude} onPress={() => go(featured.id)} />
             <View style={{ marginTop: Spacing.two }}>
               {rest.map((u, i) => (
-                <UnitRow key={u.id} unit={u} userLat={userLocation.latitude} userLng={userLocation.longitude} last={i === rest.length - 1} onPress={() => go(u.id)} />
+                <UnitRow key={u.id} unit={u} userLat={location.latitude} userLng={location.longitude} last={i === rest.length - 1} onPress={() => go(u.id)} />
               ))}
             </View>
           </View>

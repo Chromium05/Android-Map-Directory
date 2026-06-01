@@ -10,10 +10,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { CAMPUS_CENTER } from '@/constants/units';
+import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { openRoute } from '@/utils/navigation';
 
 function HeaderBtn({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
@@ -46,6 +48,7 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
+  const location = useLocation();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -54,9 +57,6 @@ export default function MapScreen() {
 
   const [activeCat, setActiveCat] = useState('all');
   const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  // Dummy user location
-  const userLocation = CAMPUS_CENTER;
 
   useEffect(() => {
     fetchInitialData();
@@ -91,7 +91,8 @@ export default function MapScreen() {
     () =>
       visible.map((u) => ({
         id: String(u.id),
-        title: u.short_name,
+        title: u.name,
+        subtitle: `${u.buildings?.name || ''} · ${u.floor}`,
         latitude: Number(u.latitude),
         longitude: Number(u.longitude),
       })),
@@ -120,7 +121,7 @@ export default function MapScreen() {
   }
 
   const SelGlyph = Glyph[selected?.categories?.glyph || 'dept'];
-  const distanceKm = selected ? getDistanceKm(userLocation.latitude, userLocation.longitude, Number(selected.latitude), Number(selected.longitude)) : 0;
+  const distanceKm = selected ? getDistanceKm(location.latitude, location.longitude, Number(selected.latitude), Number(selected.longitude)) : 0;
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
 
   return (
@@ -149,6 +150,7 @@ export default function MapScreen() {
           style={StyleSheet.absoluteFillObject as any}
           markers={markers}
           center={CAMPUS_CENTER}
+          userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude } : undefined}
           zoom={16}
           selectedId={String(selectedId)}
           onMarkerClick={(id) => setSelectedId(Number(id))}
@@ -217,7 +219,9 @@ export default function MapScreen() {
                   Detail
                 </ThemedText>
               </Pressable>
-              <Pressable style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
+              <Pressable 
+                onPress={() => openRoute(Number(selected.latitude), Number(selected.longitude))}
+                style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
                 <Icon.map size={15} color="#fff" />
                 <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>
                   Buka Rute

@@ -8,11 +8,12 @@ import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
-import { CAMPUS_CENTER } from '@/constants/units';
+import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { getUnitDetail } from '@/services/api';
 import type { Unit, UnitRoom } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { openRoute } from '@/utils/navigation';
 
 function CircleButton({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
   return (
@@ -36,7 +37,7 @@ function InfoRow({
   accent?: boolean;
 }) {
   const theme = useTheme();
-  const I = Icon[icon];
+  const I = Icon[icon as keyof typeof Icon] || Icon.info;
   return (
     <View style={[styles.infoRow, { borderColor: theme.hairline }]}>
       <View style={[styles.infoIcon, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline }]}>
@@ -108,13 +109,11 @@ export default function DetailScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
+  const location = useLocation();
 
   const [unit, setUnit] = useState<Unit | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Dummy user location
-  const userLocation = CAMPUS_CENTER;
 
   useEffect(() => {
     if (id) fetchDetail();
@@ -157,8 +156,11 @@ export default function DetailScreen() {
 
   const glyphName = unit.categories?.glyph || 'dept';
   const G = Glyph[glyphName];
-  const distanceKm = getDistanceKm(userLocation.latitude, userLocation.longitude, Number(unit.latitude), Number(unit.longitude));
+  const distanceKm = getDistanceKm(location.latitude, location.longitude, Number(unit.latitude), Number(unit.longitude));
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
+  
+  // ETA calculation: average walking speed ~5km/h = 83m/min
+  const etaMinutes = Math.max(1, Math.round((distanceKm * 1000) / 83));
 
   return (
     <ThemedView style={styles.container}>
@@ -221,7 +223,7 @@ export default function DetailScreen() {
             </ThemedText>
             <View style={[styles.tinyDot, { backgroundColor: theme.ink3 }]} />
             <ThemedText type="code" themeColor="textSecondary">
-              ~3 menit
+              ~{etaMinutes} menit
             </ThemedText>
           </View>
 
@@ -260,12 +262,14 @@ export default function DetailScreen() {
         <View style={[styles.ctaPin, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>
           <Icon.pin size={18} color={theme.text} />
         </View>
-        <View style={[styles.ctaButton, { backgroundColor: theme.route }]}>
+        <Pressable 
+          onPress={() => openRoute(Number(unit.latitude), Number(unit.longitude))}
+          style={({ pressed }) => [styles.ctaButton, { backgroundColor: theme.route }, pressed && styles.pressed]}>
           <Icon.map size={18} color="#fff" />
           <ThemedText type="titleM" style={{ color: '#fff' }}>
             Buka Rute · {dist} {distUnit}
           </ThemedText>
-        </View>
+        </Pressable>
       </View>
     </ThemedView>
   );
