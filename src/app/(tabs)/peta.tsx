@@ -26,20 +26,32 @@ function HeaderBtn({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FloatingActions() {
+function FloatingActions({ onLocate, onZoomIn, onZoomOut }: { onLocate: () => void, onZoomIn: () => void, onZoomOut: () => void }) {
   const theme = useTheme();
-  const btn = (child: React.ReactNode) => (
-    <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>{child}</View>
+  
+  const Fab = ({ children, onPress }: { children: React.ReactNode; onPress: () => void }) => (
+    <Pressable 
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.fab, 
+        { backgroundColor: theme.background, borderColor: theme.hairline2 },
+        pressed && styles.pressed
+      ]}>
+      {children}
+    </Pressable>
   );
+
   return (
     <View style={styles.fabColumn} pointerEvents="box-none">
-      {btn(<Icon.locate size={18} color={theme.routeInk} />)}
-      <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+      <Fab onPress={onLocate}>
+        <Icon.locate size={18} color={theme.routeInk} />
+      </Fab>
+      <Fab onPress={onZoomIn}>
         <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>+</ThemedText>
-      </View>
-      <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+      </Fab>
+      <Fab onPress={onZoomOut}>
         <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>-</ThemedText>
-      </View>
+      </Fab>
     </View>
   );
 }
@@ -57,6 +69,8 @@ export default function MapScreen() {
 
   const [activeCat, setActiveCat] = useState('all');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [mapZoom, setMapZoom] = useState(16);
+  const [mapCenter, setMapCenter] = useState(CAMPUS_CENTER);
 
   useEffect(() => {
     fetchInitialData();
@@ -98,6 +112,14 @@ export default function MapScreen() {
       })),
     [visible]
   );
+
+  const handleLocate = () => {
+    if (location.granted) {
+      setMapCenter({ latitude: location.latitude, longitude: location.longitude });
+    } else {
+      setMapCenter(CAMPUS_CENTER);
+    }
+  };
 
   if (loading) {
     return (
@@ -149,9 +171,9 @@ export default function MapScreen() {
         <CampusMap
           style={StyleSheet.absoluteFillObject as any}
           markers={markers}
-          center={CAMPUS_CENTER}
+          center={mapCenter}
           userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude } : undefined}
-          zoom={16}
+          zoom={mapZoom}
           selectedId={String(selectedId)}
           onMarkerClick={(id) => setSelectedId(Number(id))}
         />
@@ -172,7 +194,11 @@ export default function MapScreen() {
           ))}
         </ScrollView>
 
-        <FloatingActions />
+        <FloatingActions 
+          onLocate={handleLocate}
+          onZoomIn={() => setMapZoom(z => Math.min(z + 1, 19))}
+          onZoomOut={() => setMapZoom(z => Math.max(z - 1, 10))}
+        />
 
         {/* Bottom sheet */}
         {selected && (

@@ -1,34 +1,58 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { useColorScheme } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { Icon } from '@/components/icons';
+import { Colors, Font } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  // normalize scheme to 'light' or 'dark' (react-native may return null/undefined or values like 'no-preference')
-  const normalizedScheme: 'light' | 'dark' = scheme === 'dark' ? 'dark' : 'light';
-  const colors = Colors[normalizedScheme];
+  const theme = useTheme();
 
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <Label>Beranda</Label>
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="peta">
-        <Label>Peta</Label>
-        <Icon sf={{ default: 'map', selected: 'map.fill' }} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="info">
-        <Label>Info</Label>
-        <Icon sf={{ default: 'info.circle', selected: 'info.circle.fill' }} />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: theme.text,
+        tabBarInactiveTintColor: theme.textSecondary,
+        tabBarStyle: {
+          backgroundColor: theme.background,
+          borderTopColor: theme.hairline,
+          height: 60,
+          paddingBottom: 10,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontFamily: Font.sans['600'],
+          fontSize: 11,
+        },
+      }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Beranda',
+          tabBarIcon: ({ color, focused }) => (
+            <Icon.homeFill size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="peta"
+        options={{
+          title: 'Peta',
+          tabBarIcon: ({ color, focused }) => (
+            <Icon.map size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="info"
+        options={{
+          title: 'Info',
+          tabBarIcon: ({ color, focused }) => (
+            <Icon.info size={24} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }

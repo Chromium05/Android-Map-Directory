@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloorBadge, PhotoSlot, StatusPill } from '@/components/atoms';
@@ -15,9 +15,19 @@ import type { Unit, UnitRoom } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
 import { openRoute } from '@/utils/navigation';
 
-function CircleButton({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
+function CircleButton({ children, onPress, active = false }: { children: React.ReactNode; onPress?: () => void; active?: boolean }) {
+  const theme = useTheme();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.topBtn, pressed && styles.pressed]}>
+    <Pressable 
+      onPress={onPress} 
+      style={({ pressed }) => [
+        styles.topBtn, 
+        { 
+          backgroundColor: active ? theme.routeTint : theme.background + 'ec', 
+          borderColor: active ? theme.route : theme.hairline 
+        },
+        pressed && styles.pressed
+      ]}>
       {children}
     </Pressable>
   );
@@ -83,10 +93,16 @@ function SubRooms({ rooms }: { rooms: UnitRoom[] }) {
   );
 }
 
-function QuickAction({ tag, label, value }: { tag: string; label: string; value: string }) {
+function QuickAction({ tag, label, value, onPress }: { tag: string; label: string; value: string; onPress?: () => void }) {
   const theme = useTheme();
   return (
-    <View style={[styles.quick, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+    <Pressable 
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.quick, 
+        { backgroundColor: theme.background, borderColor: theme.hairline2 },
+        pressed && styles.pressed
+      ]}>
       <View style={[styles.quickTag, { backgroundColor: theme.backgroundElement }]}>
         <ThemedText type="monoMeta" style={{ fontSize: 11 }}>
           {tag}
@@ -100,7 +116,7 @@ function QuickAction({ tag, label, value }: { tag: string; label: string; value:
           {value}
         </ThemedText>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -114,6 +130,7 @@ export default function DetailScreen() {
   const [unit, setUnit] = useState<Unit | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     if (id) fetchDetail();
@@ -131,6 +148,30 @@ export default function DetailScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    Alert.alert(
+      !isFavorite ? 'Ditambahkan' : 'Dihapus',
+      !isFavorite ? `${unit?.name} telah ditambahkan ke favorit.` : `${unit?.name} dihapus dari favorit.`
+    );
+  };
+
+  const openPhone = () => {
+    Linking.openURL('tel:+62315941234');
+  };
+
+  const openWeb = () => {
+    Linking.openURL('https://ti.kampus.ac.id');
+  };
+
+  const showMoreOptions = () => {
+    Alert.alert('Opsi Lainnya', 'Pilih tindakan untuk unit ini:', [
+      { text: 'Bagikan', onPress: () => Alert.alert('Berbagi', 'Fitur berbagi akan segera hadir.') },
+      { text: 'Laporkan Kesalahan', onPress: () => Alert.alert('Lapor', 'Terima kasih, laporan Anda telah kami terima.') },
+      { text: 'Batal', style: 'cancel' },
+    ]);
   };
 
   if (loading) {
@@ -174,11 +215,11 @@ export default function DetailScreen() {
               </View>
             </CircleButton>
             <View style={styles.topRight}>
-              <CircleButton>
-                <Icon.star size={15} color={theme.ink3} />
+              <CircleButton active={isFavorite} onPress={toggleFavorite}>
+                <Icon.star size={15} color={isFavorite ? theme.route : theme.ink3} />
               </CircleButton>
-              <CircleButton>
-                <ThemedText type="titleM">⋯</ThemedText>
+              <CircleButton onPress={showMoreOptions}>
+                <ThemedText type="titleM" style={{ color: theme.text }}>⋯</ThemedText>
               </CircleButton>
             </View>
           </View>
@@ -247,8 +288,8 @@ export default function DetailScreen() {
           ) : null}
 
           <View style={styles.quickGrid}>
-            <QuickAction tag="SMS" label="Kontak" value="+62 31 594 1234" />
-            <QuickAction tag="WEB" label="Situs" value="ti.kampus.ac.id" />
+            <QuickAction tag="SMS" label="Kontak" value="+62 31 594 1234" onPress={openPhone} />
+            <QuickAction tag="WEB" label="Situs" value="ti.kampus.ac.id" onPress={openWeb} />
           </View>
         </View>
       </ScrollView>
@@ -299,9 +340,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.92)',
     borderWidth: 1,
-    borderColor: 'rgba(20,30,25,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },
