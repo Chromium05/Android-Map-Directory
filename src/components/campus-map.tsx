@@ -99,7 +99,8 @@ export default function CampusMap({
           markersMap = {};
           
           markers.forEach(function(m) {
-            var isSelected = m.id === selectedId;
+            // Use loose comparison to handle string/number mismatches
+            var isSelected = String(m.id) == String(selectedId);
             var marker = L.marker([m.latitude, m.longitude], {
               icon: L.divIcon({
                 className: '',
@@ -108,10 +109,10 @@ export default function CampusMap({
                 iconAnchor: [12, 12]
               })
             }).on('click', function() {
-              window.ReactNativeWebView.postMessage(JSON.stringify({type: 'CLICK', id: m.id}));
+              window.ReactNativeWebView.postMessage(JSON.stringify({type: 'CLICK', id: String(m.id)}));
             });
             marker.addTo(markersLayer);
-            markersMap[m.id] = m;
+            markersMap[String(m.id)] = m;
           });
 
           // Update User Location
@@ -136,8 +137,8 @@ export default function CampusMap({
             pubgLine = null;
           }
 
-          if (userLoc && selectedId && markersMap[selectedId]) {
-            var target = markersMap[selectedId];
+          if (userLoc && selectedId && markersMap[String(selectedId)]) {
+            var target = markersMap[String(selectedId)];
             pubgLine = L.polyline([
               [userLoc.latitude, userLoc.longitude],
               [target.latitude, target.longitude]
@@ -162,7 +163,7 @@ export default function CampusMap({
       </script>
     </body>
     </html>
-  `, [theme, center, zoom]);
+  `, [theme, center, zoom, markers, selectedId, userLocation]);
 
   // Sync data whenever props change
   useEffect(() => {

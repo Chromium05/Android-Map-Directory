@@ -41,6 +41,7 @@ export interface Unit {
   address: string;
   description: string;
   open_hours: string;
+  close_hours?: string;
   status: UnitStatus;
   latitude: number;
   longitude: number;

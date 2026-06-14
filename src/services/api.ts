@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { Category, Building, Unit } from '@/types/database';
 import { UNITS as MOCK_UNITS, CATEGORIES as MOCK_CATS, unitGeo } from '@/constants/units';
+import { calculateStatus } from '@/utils/time';
 
 // Map mock data to database types for fallback
 const fallbackCats: Category[] = MOCK_CATS.filter(c => c.id !== 'all').map((c, idx) => ({
@@ -23,7 +24,7 @@ const fallbackUnits: Unit[] = MOCK_UNITS.map(u => {
     address: u.addr,
     description: u.desc || '',
     open_hours: u.hours,
-    status: u.status,
+    status: calculateStatus(u.hours),
     latitude: geo.latitude,
     longitude: geo.longitude,
     coord_x: u.coord.x,
@@ -89,7 +90,10 @@ export async function getUnits(categoryId?: number): Promise<Unit[]> {
     return fallbackUnits;
   }
   
-  return data;
+  return (data as Unit[]).map(u => ({
+    ...u,
+    status: calculateStatus(u.open_hours, u.close_hours)
+  }));
 }
 
 /**
@@ -112,5 +116,13 @@ export async function getUnitDetail(id: number): Promise<Unit | null> {
     if (fallback) return fallback;
     throw error;
   }
-  return data;
+
+  if (data) {
+    return {
+      ...data,
+      status: calculateStatus(data.open_hours, data.close_hours)
+    } as Unit;
+  }
+
+  return null;
 }
