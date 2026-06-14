@@ -12,7 +12,7 @@ export type LocationState = {
 };
 
 /**
- * Hook to manage user location permissions and current position.
+ * Hook to manage user location permissions and real-time position updates.
  * Returns the current location or campus center as fallback.
  */
 export function useLocation() {
@@ -23,7 +23,9 @@ export function useLocation() {
   });
 
   useEffect(() => {
-    async function getLocation() {
+    let subscription: Location.LocationSubscription | null = null;
+
+    async function startWatching() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         
@@ -32,22 +34,39 @@ export function useLocation() {
             ...s,
             granted: false,
             loading: false,
-            error: 'Izin lokasi ditolak. Aktifkan di Setelan untuk melihat jarak.',
+            error: 'Izin lokasi ditolak. Aktifkan di Setelan untuk melihat rute.',
           }));
           return;
         }
 
-        // Low accuracy for initial quick check, then high accuracy for precision
-        const location = await Location.getCurrentPositionAsync({
+        // Get initial position quickly
+        const initialLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
 
         setState({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
+          latitude: initialLocation.coords.latitude,
+          longitude: initialLocation.coords.longitude,
           granted: true,
           loading: false,
         });
+
+        // Start watching for changes
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            distanceInterval: 1, // Update every 1 meter
+            timeInterval: 1000,   // Or every 1 second
+          },
+          (location) => {
+            setState({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              granted: true,
+              loading: false,
+            });
+          }
+        );
       } catch (err: any) {
         setState((s) => ({
           ...s,
@@ -57,7 +76,13 @@ export function useLocation() {
       }
     }
 
-    getLocation();
+    startWatching();
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
   }, []);
 
   return state;

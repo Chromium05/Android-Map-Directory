@@ -1,5 +1,39 @@
 import { supabase } from '@/lib/supabase';
 import type { Category, Building, Unit } from '@/types/database';
+import { UNITS as MOCK_UNITS, CATEGORIES as MOCK_CATS, unitGeo } from '@/constants/units';
+
+// Map mock data to database types for fallback
+const fallbackCats: Category[] = MOCK_CATS.filter(c => c.id !== 'all').map((c, idx) => ({
+  id: idx + 1,
+  name: c.id,
+  glyph: c.glyph,
+  description: ''
+}));
+
+const fallbackUnits: Unit[] = MOCK_UNITS.map(u => {
+  const geo = unitGeo(u.coord);
+  const cat = fallbackCats.find(c => c.name === u.cat);
+  return {
+    id: u.id,
+    category_id: cat?.id || 0,
+    building_id: 1,
+    name: u.name,
+    short_name: u.short,
+    floor: u.floor,
+    address: u.addr,
+    description: u.desc || '',
+    open_hours: u.hours,
+    status: u.status,
+    latitude: geo.latitude,
+    longitude: geo.longitude,
+    coord_x: u.coord.x,
+    coord_y: u.coord.y,
+    rating: u.rating,
+    photo_url: '',
+    categories: cat,
+    buildings: { id: 1, name: u.building, code: u.building.split(' ')[1] || '' }
+  };
+});
 
 /**
  * Fetches all unit categories from Supabase.
@@ -11,7 +45,7 @@ export async function getCategories(): Promise<Category[]> {
     .order('id', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data && data.length > 0) ? data : fallbackCats;
 }
 
 /**
@@ -47,7 +81,15 @@ export async function getUnits(categoryId?: number): Promise<Unit[]> {
   const { data, error } = await query;
 
   if (error) throw error;
-  return data || [];
+  
+  if (!data || data.length === 0) {
+    if (categoryId) {
+      return fallbackUnits.filter(u => u.category_id === categoryId);
+    }
+    return fallbackUnits;
+  }
+  
+  return data;
 }
 
 /**
@@ -65,6 +107,10 @@ export async function getUnitDetail(id: number): Promise<Unit | null> {
     .eq('id', id)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    const fallback = fallbackUnits.find(u => u.id === id);
+    if (fallback) return fallback;
+    throw error;
+  }
   return data;
 }

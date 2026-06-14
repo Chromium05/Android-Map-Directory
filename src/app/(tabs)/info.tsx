@@ -83,7 +83,9 @@ function CategoryRow({ category, count, last }: { category: Category; count: num
           {category.description}
         </ThemedText>
       </View>
-      <Icon.chev size={14} color={theme.ink3} style={{ marginTop: 12 }} />
+      <View style={{ marginTop: 12 }}>
+        <Icon.chev size={14} color={theme.ink3} />
+      </View>
     </View>
   );
 }

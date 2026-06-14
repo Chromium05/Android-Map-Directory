@@ -29,7 +29,7 @@ Aplikasi direktori kampus berbasis React Native (Expo) untuk mencari dan menjela
 | Framework | Expo SDK 55 + React Native 0.83 |
 | Routing | Expo Router (file-based, typed routes) |
 | Language | TypeScript (strict mode) |
-| Maps | `react-native-maps` |
+| Maps | `react-native-webview` (OpenStreetMap + Leaflet) |
 | Styling | Token-based theming (`src/constants/theme.ts`) |
 | Build | EAS Build + EAS Submit |
 | Compiler | React Compiler (enabled) |
