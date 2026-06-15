@@ -105,7 +105,7 @@ function FeaturedCard({ unit, userLat, userLng, onPress }: { unit: Unit; userLat
             <ThemedText type="titleM" style={{ flex: 1 }}>
               {unit.name}
             </ThemedText>
-            <Distance value={dist} unit={distUnit} />
+            <Distance value={dist} unit={distUnit}/>
           </View>
           <View style={[styles.rowBetween, { marginTop: Spacing.two }]}>
             <View style={styles.inlineRow}>
@@ -147,7 +147,7 @@ function UnitRow({ unit, userLat, userLng, last, onPress }: { unit: Unit; userLa
             <ThemedText type="titleM" numberOfLines={1} style={{ flex: 1 }}>
               {unit.name}
             </ThemedText>
-            <Distance value={dist} unit={distUnit} />
+            <Distance value={dist} unit={distUnit}/>
           </View>
           <View style={{ marginTop: Spacing.one }}>
             <FloorBadge building={unit.buildings?.name || ''} floor={unit.floor} compact />

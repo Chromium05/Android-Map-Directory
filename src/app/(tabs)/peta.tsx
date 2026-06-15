@@ -217,7 +217,7 @@ export default function MapScreen() {
                   <ThemedText type="monoTag" themeColor="ink3" style={{ letterSpacing: 0.8 }}>
                     {selected.categories?.name}
                   </ThemedText>
-                  <Distance value={dist} unit={distUnit} />
+                  <Distance value={dist} unit={distUnit}/>
                 </View>
                 <ThemedText type="display" style={{ fontSize: 16, marginTop: 2 }}>
                   {selected.name}
