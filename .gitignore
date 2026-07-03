@@ -45,3 +45,5 @@ app-example
 # generated native fdolders
 /ios
 /android
+
+repomix-output.xml

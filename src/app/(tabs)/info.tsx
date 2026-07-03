@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/themed-view'; // Wait, let's check correct import
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
@@ -67,7 +66,7 @@ function StatCard({ value, unit, label }: { value: number; unit: string; label: 
 
 function CategoryRow({ category, count, last }: { category: Category; count: number; last?: boolean }) {
   const theme = useTheme();
-  const G = Glyph[category.glyph];
+  const G = Glyph[category.glyph] ?? Glyph.dept;
   return (
     <View style={[styles.catRow, !last && { borderBottomWidth: 1, borderColor: theme.hairline }]}>
       <View style={[styles.catIcon, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>

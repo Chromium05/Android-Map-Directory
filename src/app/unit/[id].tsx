@@ -197,7 +197,7 @@ export default function DetailScreen() {
 
   const glyphName = unit.categories?.glyph || 'dept';
   const G = Glyph[glyphName];
-  const distanceKm = getDistanceKm(location.latitude, location.longitude, Number(unit.latitude), Number(unit.longitude));
+  const distanceKm = getDistanceKm(location.latitude, location.longitude, Number(unit.lat), Number(unit.lng));
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
   
   // ETA calculation: average walking speed ~5km/h = 83m/min
@@ -278,7 +278,7 @@ export default function DetailScreen() {
             <InfoRow icon="pin" label="Lokasi" value={`${unit.buildings?.name} · ${unit.floor}`} accent />
             <InfoRow icon="info" label="Alamat" value={unit.address} />
             <InfoRow icon="star" label="Jam Layanan" value={unit.open_hours} mono />
-            <InfoRow icon="locate" label="Koordinat" value={`${unit.latitude}, ${unit.longitude}`} mono />
+            <InfoRow icon="locate" label="Koordinat" value={`${unit.lat}, ${unit.lng}`} mono />
           </View>
 
           {unit.unit_rooms && unit.unit_rooms.length > 0 ? (
@@ -304,7 +304,7 @@ export default function DetailScreen() {
           <Icon.pin size={18} color={theme.text} />
         </View>
         <Pressable 
-          onPress={() => openRoute(Number(unit.latitude), Number(unit.longitude))}
+          onPress={() => openRoute(Number(unit.lat), Number(unit.lng))}
           style={({ pressed }) => [styles.ctaButton, { backgroundColor: theme.route }, pressed && styles.pressed]}>
           <Icon.map size={18} color="#fff" />
           <ThemedText type="titleM" style={{ color: '#fff' }}>

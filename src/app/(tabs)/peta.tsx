@@ -107,8 +107,8 @@ export default function MapScreen() {
         id: String(u.id),
         title: u.name,
         subtitle: `${u.buildings?.name || ''} · ${u.floor}`,
-        latitude: Number(u.latitude),
-        longitude: Number(u.longitude),
+        latitude: Number(u.lat),
+        longitude: Number(u.lng),
       })),
     [visible]
   );
@@ -143,7 +143,7 @@ export default function MapScreen() {
   }
 
   const SelGlyph = Glyph[selected?.categories?.glyph || 'dept'];
-  const distanceKm = selected ? getDistanceKm(location.latitude, location.longitude, Number(selected.latitude), Number(selected.longitude)) : 0;
+  const distanceKm = selected ? getDistanceKm(location.latitude, location.longitude, Number(selected.lat), Number(selected.lng)) : 0;
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
 
   return (
@@ -246,7 +246,7 @@ export default function MapScreen() {
                 </ThemedText>
               </Pressable>
               <Pressable 
-                onPress={() => openRoute(Number(selected.latitude), Number(selected.longitude))}
+                onPress={() => openRoute(Number(selected.lat), Number(selected.lng))}
                 style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
                 <Icon.map size={15} color="#fff" />
                 <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>

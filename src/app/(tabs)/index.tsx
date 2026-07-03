@@ -82,7 +82,7 @@ function FeaturedCard({ unit, userLat, userLng, onPress }: { unit: Unit; userLat
   const theme = useTheme();
   const glyphName = unit.categories?.glyph || 'dept';
   const G = Glyph[glyphName];
-  const distanceKm = getDistanceKm(userLat, userLng, Number(unit.latitude), Number(unit.longitude));
+  const distanceKm = getDistanceKm(userLat, userLng, Number(unit.lat), Number(unit.lng));
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
 
   return (
@@ -115,7 +115,7 @@ function FeaturedCard({ unit, userLat, userLng, onPress }: { unit: Unit; userLat
               </ThemedText>
             </View>
             <Pressable 
-              onPress={(e) => { e.stopPropagation(); openRoute(Number(unit.latitude), Number(unit.longitude)); }}
+              onPress={(e) => { e.stopPropagation(); openRoute(Number(unit.lat), Number(unit.lng)); }}
               style={[styles.routeChip, { backgroundColor: theme.text }]}>
               <ThemedText type="caption" style={[styles.bold, { color: theme.background }]}>
                 Buka rute
@@ -133,7 +133,7 @@ function UnitRow({ unit, userLat, userLng, last, onPress }: { unit: Unit; userLa
   const theme = useTheme();
   const glyphName = unit.categories?.glyph || 'dept';
   const G = Glyph[glyphName];
-  const distanceKm = getDistanceKm(userLat, userLng, Number(unit.latitude), Number(unit.longitude));
+  const distanceKm = getDistanceKm(userLat, userLng, Number(unit.lat), Number(unit.lng));
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
 
   return (
@@ -160,7 +160,7 @@ function UnitRow({ unit, userLat, userLng, last, onPress }: { unit: Unit; userLa
               </ThemedText>
             </View>
             <Pressable 
-              onPress={(e) => { e.stopPropagation(); openRoute(Number(unit.latitude), Number(unit.longitude)); }}
+              onPress={(e) => { e.stopPropagation(); openRoute(Number(unit.lat), Number(unit.lng)); }}
               style={styles.inlineRowTight}>
               <ThemedText type="caption" themeColor="routeInk" style={styles.bold}>
                 Rute
@@ -223,8 +223,8 @@ export default function HomeScreen() {
   };
 
   const sorted = [...units].sort((a, b) => {
-    const distA = getDistanceKm(location.latitude, location.longitude, Number(a.latitude), Number(a.longitude));
-    const distB = getDistanceKm(location.latitude, location.longitude, Number(b.latitude), Number(b.longitude));
+    const distA = getDistanceKm(location.latitude, location.longitude, Number(a.lat), Number(a.lng));
+    const distB = getDistanceKm(location.latitude, location.longitude, Number(b.lat), Number(a.lng));
     return distA - distB;
   });
 
