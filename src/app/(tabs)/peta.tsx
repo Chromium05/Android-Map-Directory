@@ -15,6 +15,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { formatHoursRange } from '@/utils/time';
 import { openRoute } from '@/utils/navigation';
 
 function HeaderBtn({ children }: { children: React.ReactNode }) {
@@ -226,7 +227,7 @@ export default function MapScreen() {
                   <FloorBadge building={selected.buildings?.name || ''} floor={selected.floor} />
                   <StatusPill status={selected.status} />
                   <ThemedText type="monoMeta" themeColor="textSecondary">
-                    {selected.open_hours}
+                    {formatHoursRange(selected.open_hours, selected.close_hours)}
                   </ThemedText>
                 </View>
               </View>

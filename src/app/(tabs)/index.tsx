@@ -14,6 +14,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { formatHoursRange } from '@/utils/time';
 import { openRoute } from '@/utils/navigation';
 
 // Tapping the search bar body opens the search overlay.
@@ -111,7 +112,7 @@ function FeaturedCard({ unit, userLat, userLng, onPress }: { unit: Unit; userLat
             <View style={styles.inlineRow}>
               <StatusPill status={unit.status} />
               <ThemedText type="monoMeta" themeColor="textSecondary">
-                {unit.open_hours}
+                {formatHoursRange(unit.open_hours, unit.close_hours)}
               </ThemedText>
             </View>
             <Pressable 
@@ -156,7 +157,7 @@ function UnitRow({ unit, userLat, userLng, last, onPress }: { unit: Unit; userLa
             <View style={styles.inlineRow}>
               <StatusPill status={unit.status} />
               <ThemedText type="monoMeta" themeColor="ink3">
-                {unit.open_hours}
+                {formatHoursRange(unit.open_hours, unit.close_hours)}
               </ThemedText>
             </View>
             <Pressable 
