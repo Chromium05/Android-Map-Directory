@@ -10,10 +10,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { CAMPUS_CENTER } from '@/constants/units';
+import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { openRoute } from '@/utils/navigation';
 
 function HeaderBtn({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
@@ -24,20 +26,32 @@ function HeaderBtn({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FloatingActions() {
+function FloatingActions({ onLocate, onZoomIn, onZoomOut }: { onLocate: () => void, onZoomIn: () => void, onZoomOut: () => void }) {
   const theme = useTheme();
-  const btn = (child: React.ReactNode) => (
-    <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>{child}</View>
+  
+  const Fab = ({ children, onPress }: { children: React.ReactNode; onPress: () => void }) => (
+    <Pressable 
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.fab, 
+        { backgroundColor: theme.background, borderColor: theme.hairline2 },
+        pressed && styles.pressed
+      ]}>
+      {children}
+    </Pressable>
   );
+
   return (
     <View style={styles.fabColumn} pointerEvents="box-none">
-      {btn(<Icon.locate size={18} color={theme.routeInk} />)}
-      <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+      <Fab onPress={onLocate}>
+        <Icon.locate size={18} color={theme.routeInk} />
+      </Fab>
+      <Fab onPress={onZoomIn}>
         <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>+</ThemedText>
-      </View>
-      <View style={[styles.fab, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+      </Fab>
+      <Fab onPress={onZoomOut}>
         <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>-</ThemedText>
-      </View>
+      </Fab>
     </View>
   );
 }
@@ -46,6 +60,7 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
+  const location = useLocation();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -54,9 +69,8 @@ export default function MapScreen() {
 
   const [activeCat, setActiveCat] = useState('all');
   const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  // Dummy user location
-  const userLocation = CAMPUS_CENTER;
+  const [mapZoom, setMapZoom] = useState(16);
+  const [mapCenter, setMapCenter] = useState(CAMPUS_CENTER);
 
   useEffect(() => {
     fetchInitialData();
@@ -91,12 +105,21 @@ export default function MapScreen() {
     () =>
       visible.map((u) => ({
         id: String(u.id),
-        title: u.short_name,
-        latitude: Number(u.latitude),
-        longitude: Number(u.longitude),
+        title: u.name,
+        subtitle: `${u.buildings?.name || ''} · ${u.floor}`,
+        latitude: Number(u.lat),
+        longitude: Number(u.lng),
       })),
     [visible]
   );
+
+  const handleLocate = () => {
+    if (location.granted) {
+      setMapCenter({ latitude: location.latitude, longitude: location.longitude });
+    } else {
+      setMapCenter(CAMPUS_CENTER);
+    }
+  };
 
   if (loading) {
     return (
@@ -120,7 +143,7 @@ export default function MapScreen() {
   }
 
   const SelGlyph = Glyph[selected?.categories?.glyph || 'dept'];
-  const distanceKm = selected ? getDistanceKm(userLocation.latitude, userLocation.longitude, Number(selected.latitude), Number(selected.longitude)) : 0;
+  const distanceKm = selected ? getDistanceKm(location.latitude, location.longitude, Number(selected.lat), Number(selected.lng)) : 0;
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
 
   return (
@@ -148,8 +171,9 @@ export default function MapScreen() {
         <CampusMap
           style={StyleSheet.absoluteFillObject as any}
           markers={markers}
-          center={CAMPUS_CENTER}
-          zoom={16}
+          center={mapCenter}
+          userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude } : undefined}
+          zoom={mapZoom}
           selectedId={String(selectedId)}
           onMarkerClick={(id) => setSelectedId(Number(id))}
         />
@@ -170,7 +194,11 @@ export default function MapScreen() {
           ))}
         </ScrollView>
 
-        <FloatingActions />
+        <FloatingActions 
+          onLocate={handleLocate}
+          onZoomIn={() => setMapZoom(z => Math.min(z + 1, 19))}
+          onZoomOut={() => setMapZoom(z => Math.max(z - 1, 10))}
+        />
 
         {/* Bottom sheet */}
         {selected && (
@@ -189,7 +217,7 @@ export default function MapScreen() {
                   <ThemedText type="monoTag" themeColor="ink3" style={{ letterSpacing: 0.8 }}>
                     {selected.categories?.name}
                   </ThemedText>
-                  <Distance value={dist} unit={distUnit} />
+                  <Distance value={dist} unit={distUnit}/>
                 </View>
                 <ThemedText type="display" style={{ fontSize: 16, marginTop: 2 }}>
                   {selected.name}
@@ -217,7 +245,9 @@ export default function MapScreen() {
                   Detail
                 </ThemedText>
               </Pressable>
-              <Pressable style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
+              <Pressable 
+                onPress={() => openRoute(Number(selected.lat), Number(selected.lng))}
+                style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
                 <Icon.map size={15} color="#fff" />
                 <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>
                   Buka Rute

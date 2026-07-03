@@ -19,7 +19,7 @@ export type CampusMapProps = {
 };
 
 /**
- * Web — expo-maps is Android/iOS only. Renders the SVG campus plan with
+ * Web — react-native-maps is Android/iOS only. Renders the SVG campus plan with
  * interactive pins so the Peta screen is fully functional on web.
  */
 export default function CampusMap({ markers, selectedId, onMarkerClick, style }: CampusMapProps) {

@@ -1,5 +1,5 @@
 // campus-plan.tsx — Static SVG campus map with interactive pins
-// Used as the web map and native fallback (when expo-maps is unavailable).
+// Used as the web map and native fallback (when react-native-maps is unavailable).
 // Background: 380×600 plan. Pins, user dot, callout overlaid as RN Views.
 
 import React, { useCallback, useState } from 'react';

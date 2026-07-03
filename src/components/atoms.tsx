@@ -118,7 +118,7 @@ export function CategoryChip({
   compact?: boolean;
 }) {
   const theme = useTheme();
-  const G = Glyph[glyph];
+  const G = Glyph[glyph] ?? Glyph.all;
   return (
     <View
       style={[

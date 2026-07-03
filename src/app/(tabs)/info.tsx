@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
+
+// Correcting import for ThemedView based on file tree
+import { ThemedView as UIThemedView } from '@/components/themed-view';
 
 function BrandCard() {
   const theme = useTheme();
@@ -64,7 +66,7 @@ function StatCard({ value, unit, label }: { value: number; unit: string; label: 
 
 function CategoryRow({ category, count, last }: { category: Category; count: number; last?: boolean }) {
   const theme = useTheme();
-  const G = Glyph[category.glyph];
+  const G = Glyph[category.glyph] ?? Glyph.dept;
   return (
     <View style={[styles.catRow, !last && { borderBottomWidth: 1, borderColor: theme.hairline }]}>
       <View style={[styles.catIcon, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>
@@ -83,16 +85,24 @@ function CategoryRow({ category, count, last }: { category: Category; count: num
           {category.description}
         </ThemedText>
       </View>
-      <Icon.chev size={14} color={theme.ink3} style={{ marginTop: 12 }} />
+      <View style={{ marginTop: 12 }}>
+        <Icon.chev size={14} color={theme.ink3} />
+      </View>
     </View>
   );
 }
 
-function ActionRow({ label, sub, glyph = 'info', mono, last }: { label: string; sub?: string; glyph?: string; mono?: boolean; last?: boolean }) {
+function ActionRow({ label, sub, glyph = 'info', mono, last, onPress }: { label: string; sub?: string; glyph?: string; mono?: boolean; last?: boolean; onPress?: () => void }) {
   const theme = useTheme();
   const I = Icon[glyph as keyof typeof Icon] || Icon.info;
   return (
-    <View style={[styles.actionRow, !last && { borderBottomWidth: 1, borderColor: theme.hairline }]}>
+    <Pressable 
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionRow, 
+        !last && { borderBottomWidth: 1, borderColor: theme.hairline },
+        pressed && styles.pressed
+      ]}>
       <View style={[styles.actionIcon, { backgroundColor: theme.backgroundElement }]}>
         <I size={15} color={theme.text} />
       </View>
@@ -107,7 +117,7 @@ function ActionRow({ label, sub, glyph = 'info', mono, last }: { label: string; 
         )}
       </View>
       <Icon.chev size={14} color={theme.ink3} />
-    </View>
+    </Pressable>
   );
 }
 
@@ -165,19 +175,41 @@ export default function InfoScreen() {
     }
   };
 
+  const handleAction = (type: string) => {
+    switch (type) {
+      case 'help':
+        Alert.alert('Bantuan', 'Buka dokumentasi bantuan di browser?', [
+          { text: 'Buka', onPress: () => Linking.openURL('https://example.com/help') },
+          { text: 'Batal', style: 'cancel' }
+        ]);
+        break;
+      case 'feedback':
+        Alert.alert('Masukan', 'Kirim email masukan?', [
+          { text: 'Kirim', onPress: () => Linking.openURL('mailto:support@kampus.ac.id') },
+          { text: 'Batal', style: 'cancel' }
+        ]);
+        break;
+      case 'source':
+        Alert.alert('Sumber Data', 'Data berasal dari BAA & Pusat Sistem Informasi Kampus per Mei 2026.');
+        break;
+      default:
+        break;
+    }
+  };
+
   if (loading) {
     return (
-      <ThemedView style={[styles.container, styles.center]}>
+      <UIThemedView style={[styles.container, styles.center]}>
         <ActivityIndicator size="large" color={theme.route} />
         <ThemedText type="caption" style={{ marginTop: Spacing.two }}>Memuat info...</ThemedText>
-      </ThemedView>
+      </UIThemedView>
     );
   }
 
   const buildingsCount = new Set(units.map((u) => u.building_id)).size;
 
   return (
-    <ThemedView style={styles.container}>
+    <UIThemedView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.one }]}>
         <View style={{ flex: 1 }}>
           <ThemedText type="monoTag" themeColor="textSecondary" style={{ letterSpacing: 1.5 }}>
@@ -225,9 +257,9 @@ export default function InfoScreen() {
               Lainnya
             </ThemedText>
             <View style={[styles.catWrap, { backgroundColor: theme.background, borderColor: theme.hairline, overflow: 'hidden' }]}>
-              <ActionRow label="Bantuan & FAQ" sub="Cara pakai, izin GPS, masalah umum" glyph="info" />
-              <ActionRow label="Berikan masukan" sub="Kirim saran atau laporkan data salah" glyph="star" />
-              <ActionRow label="Sumber data" sub="BAA & Pusat Sistem Informasi" glyph="pin" />
+              <ActionRow label="Bantuan & FAQ" sub="Cara pakai, izin GPS, masalah umum" glyph="info" onPress={() => handleAction('help')} />
+              <ActionRow label="Berikan masukan" sub="Kirim saran atau laporkan data salah" glyph="star" onPress={() => handleAction('feedback')} />
+              <ActionRow label="Sumber data" sub="BAA & Pusat Sistem Informasi" glyph="pin" onPress={() => handleAction('source')} />
               <ActionRow label="Versi aplikasi" sub="1.0.0 · build 2026.05.17" glyph="sliders" mono last />
             </View>
           </View>
@@ -237,7 +269,7 @@ export default function InfoScreen() {
           </ThemedText>
         </View>
       </ScrollView>
-    </ThemedView>
+    </UIThemedView>
   );
 }
 
@@ -347,6 +379,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   credit: { textAlign: 'center', marginTop: Spacing.two, lineHeight: 16 },
+  pressed: { opacity: 0.7 },
   retryBtn: {
     marginTop: Spacing.four,
     paddingHorizontal: Spacing.four,

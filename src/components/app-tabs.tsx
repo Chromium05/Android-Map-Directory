@@ -1,32 +1,66 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
+import { Icon } from '@/components/icons';
+import { Colors, Font } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <Label>Beranda</Label>
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="peta">
-        <Label>Peta</Label>
-        <Icon sf={{ default: 'map', selected: 'map.fill' }} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="info">
-        <Label>Info</Label>
-        <Icon sf={{ default: 'info.circle', selected: 'info.circle.fill' }} />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: theme.route,
+        tabBarInactiveTintColor: theme.textSecondary,
+        tabBarStyle: {
+          backgroundColor: theme.background,
+          borderTopColor: theme.hairline,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontFamily: Font.sans['600'],
+          fontSize: 11,
+        },
+        tabBarItemStyle: {
+          marginHorizontal: 8,
+          borderRadius: 12,
+        },
+      }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Beranda',
+          tabBarIcon: ({ color, focused }) => (
+            focused ? <Icon.homeFill size={24} color={color} /> : <Icon.home size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="peta"
+        options={{
+          title: 'Peta',
+          tabBarIcon: ({ color, focused }) => (
+            <Icon.map size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="info"
+        options={{
+          title: 'Info',
+          tabBarIcon: ({ color, focused }) => (
+            <Icon.info size={24} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
+
+

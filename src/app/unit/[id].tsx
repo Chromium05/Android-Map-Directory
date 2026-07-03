@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloorBadge, PhotoSlot, StatusPill } from '@/components/atoms';
@@ -8,15 +8,26 @@ import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
-import { CAMPUS_CENTER } from '@/constants/units';
+import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { getUnitDetail } from '@/services/api';
 import type { Unit, UnitRoom } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { openRoute } from '@/utils/navigation';
 
-function CircleButton({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
+function CircleButton({ children, onPress, active = false }: { children: React.ReactNode; onPress?: () => void; active?: boolean }) {
+  const theme = useTheme();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.topBtn, pressed && styles.pressed]}>
+    <Pressable 
+      onPress={onPress} 
+      style={({ pressed }) => [
+        styles.topBtn, 
+        { 
+          backgroundColor: active ? theme.routeTint : theme.background + 'ec', 
+          borderColor: active ? theme.route : theme.hairline 
+        },
+        pressed && styles.pressed
+      ]}>
       {children}
     </Pressable>
   );
@@ -36,7 +47,7 @@ function InfoRow({
   accent?: boolean;
 }) {
   const theme = useTheme();
-  const I = Icon[icon];
+  const I = Icon[icon as keyof typeof Icon] || Icon.info;
   return (
     <View style={[styles.infoRow, { borderColor: theme.hairline }]}>
       <View style={[styles.infoIcon, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline }]}>
@@ -82,10 +93,16 @@ function SubRooms({ rooms }: { rooms: UnitRoom[] }) {
   );
 }
 
-function QuickAction({ tag, label, value }: { tag: string; label: string; value: string }) {
+function QuickAction({ tag, label, value, onPress }: { tag: string; label: string; value: string; onPress?: () => void }) {
   const theme = useTheme();
   return (
-    <View style={[styles.quick, { backgroundColor: theme.background, borderColor: theme.hairline2 }]}>
+    <Pressable 
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.quick, 
+        { backgroundColor: theme.background, borderColor: theme.hairline2 },
+        pressed && styles.pressed
+      ]}>
       <View style={[styles.quickTag, { backgroundColor: theme.backgroundElement }]}>
         <ThemedText type="monoMeta" style={{ fontSize: 11 }}>
           {tag}
@@ -99,7 +116,7 @@ function QuickAction({ tag, label, value }: { tag: string; label: string; value:
           {value}
         </ThemedText>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -108,13 +125,12 @@ export default function DetailScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
+  const location = useLocation();
 
   const [unit, setUnit] = useState<Unit | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Dummy user location
-  const userLocation = CAMPUS_CENTER;
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     if (id) fetchDetail();
@@ -132,6 +148,30 @@ export default function DetailScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    Alert.alert(
+      !isFavorite ? 'Ditambahkan' : 'Dihapus',
+      !isFavorite ? `${unit?.name} telah ditambahkan ke favorit.` : `${unit?.name} dihapus dari favorit.`
+    );
+  };
+
+  const openPhone = () => {
+    Linking.openURL('tel:+62315941234');
+  };
+
+  const openWeb = () => {
+    Linking.openURL('https://ti.kampus.ac.id');
+  };
+
+  const showMoreOptions = () => {
+    Alert.alert('Opsi Lainnya', 'Pilih tindakan untuk unit ini:', [
+      { text: 'Bagikan', onPress: () => Alert.alert('Berbagi', 'Fitur berbagi akan segera hadir.') },
+      { text: 'Laporkan Kesalahan', onPress: () => Alert.alert('Lapor', 'Terima kasih, laporan Anda telah kami terima.') },
+      { text: 'Batal', style: 'cancel' },
+    ]);
   };
 
   if (loading) {
@@ -157,8 +197,11 @@ export default function DetailScreen() {
 
   const glyphName = unit.categories?.glyph || 'dept';
   const G = Glyph[glyphName];
-  const distanceKm = getDistanceKm(userLocation.latitude, userLocation.longitude, Number(unit.latitude), Number(unit.longitude));
+  const distanceKm = getDistanceKm(location.latitude, location.longitude, Number(unit.lat), Number(unit.lng));
   const { value: dist, unit: distUnit } = formatDistance(distanceKm);
+  
+  // ETA calculation: average walking speed ~5km/h = 83m/min
+  const etaMinutes = Math.max(1, Math.round((distanceKm * 1000) / 83));
 
   return (
     <ThemedView style={styles.container}>
@@ -172,11 +215,11 @@ export default function DetailScreen() {
               </View>
             </CircleButton>
             <View style={styles.topRight}>
-              <CircleButton>
-                <Icon.star size={15} color={theme.ink3} />
+              <CircleButton active={isFavorite} onPress={toggleFavorite}>
+                <Icon.star size={15} color={isFavorite ? theme.route : theme.ink3} />
               </CircleButton>
-              <CircleButton>
-                <ThemedText type="titleM">⋯</ThemedText>
+              <CircleButton onPress={showMoreOptions}>
+                <ThemedText type="titleM" style={{ color: theme.text }}>⋯</ThemedText>
               </CircleButton>
             </View>
           </View>
@@ -221,7 +264,7 @@ export default function DetailScreen() {
             </ThemedText>
             <View style={[styles.tinyDot, { backgroundColor: theme.ink3 }]} />
             <ThemedText type="code" themeColor="textSecondary">
-              ~3 menit
+              ~{etaMinutes} menit
             </ThemedText>
           </View>
 
@@ -235,7 +278,7 @@ export default function DetailScreen() {
             <InfoRow icon="pin" label="Lokasi" value={`${unit.buildings?.name} · ${unit.floor}`} accent />
             <InfoRow icon="info" label="Alamat" value={unit.address} />
             <InfoRow icon="star" label="Jam Layanan" value={unit.open_hours} mono />
-            <InfoRow icon="locate" label="Koordinat" value={`${unit.latitude}, ${unit.longitude}`} mono />
+            <InfoRow icon="locate" label="Koordinat" value={`${unit.lat}, ${unit.lng}`} mono />
           </View>
 
           {unit.unit_rooms && unit.unit_rooms.length > 0 ? (
@@ -245,8 +288,8 @@ export default function DetailScreen() {
           ) : null}
 
           <View style={styles.quickGrid}>
-            <QuickAction tag="SMS" label="Kontak" value="+62 31 594 1234" />
-            <QuickAction tag="WEB" label="Situs" value="ti.kampus.ac.id" />
+            <QuickAction tag="SMS" label="Kontak" value="+62 31 594 1234" onPress={openPhone} />
+            <QuickAction tag="WEB" label="Situs" value="ti.kampus.ac.id" onPress={openWeb} />
           </View>
         </View>
       </ScrollView>
@@ -260,12 +303,14 @@ export default function DetailScreen() {
         <View style={[styles.ctaPin, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>
           <Icon.pin size={18} color={theme.text} />
         </View>
-        <View style={[styles.ctaButton, { backgroundColor: theme.route }]}>
+        <Pressable 
+          onPress={() => openRoute(Number(unit.lat), Number(unit.lng))}
+          style={({ pressed }) => [styles.ctaButton, { backgroundColor: theme.route }, pressed && styles.pressed]}>
           <Icon.map size={18} color="#fff" />
           <ThemedText type="titleM" style={{ color: '#fff' }}>
             Buka Rute · {dist} {distUnit}
           </ThemedText>
-        </View>
+        </Pressable>
       </View>
     </ThemedView>
   );
@@ -295,9 +340,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.92)',
     borderWidth: 1,
-    borderColor: 'rgba(20,30,25,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },

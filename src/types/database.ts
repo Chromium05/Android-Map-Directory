@@ -20,8 +20,8 @@ export interface Building {
   id: number;
   name: string;
   code: string;
-  latitude?: number;
-  longitude?: number;
+  lat?: number;
+  lng?: number;
 }
 
 export interface UnitRoom {
@@ -41,11 +41,10 @@ export interface Unit {
   address: string;
   description: string;
   open_hours: string;
+  close_hours?: string;
   status: UnitStatus;
-  latitude: number;
-  longitude: number;
-  coord_x: number;
-  coord_y: number;
+  lat: number;
+  lng: number;
   rating: number;
   photo_url: string;
   
