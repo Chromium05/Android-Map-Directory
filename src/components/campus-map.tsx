@@ -14,7 +14,7 @@ export type CampusMapMarker = {
 export type CampusMapProps = {
   markers: CampusMapMarker[];
   center: { latitude: number; longitude: number };
-  userLocation?: { latitude: number; longitude: number };
+  userLocation?: { latitude: number; longitude: number; heading?: number };
   zoom?: number;
   selectedId?: string;
   onMarkerClick?: (id: string) => void;
@@ -40,6 +40,7 @@ export default function CampusMap({
 }: CampusMapProps) {
   const theme = useTheme();
   const webViewRef = useRef<WebView>(null);
+  const initialDataRef = useRef({ markers, selectedId, userLocation });
 
   // Prepare HTML content for Leaflet
   const htmlContent = useMemo(() => `
@@ -52,23 +53,45 @@ export default function CampusMap({
       <style>
         body { margin: 0; padding: 0; background: ${theme.background}; }
         #map { height: 100vh; width: 100vw; }
+        .user-marker-rotate {
+          position: relative;
+          width: 40px;
+          height: 40px;
+        }
         .user-dot {
+          position: absolute;
+          top: 50%; left: 50%;
           width: 14px;
           height: 14px;
+          margin: -7px 0 0 -7px;
           background-color: ${theme.route};
           border: 3px solid white;
           border-radius: 50%;
           box-shadow: 0 0 10px rgba(0,0,0,0.3);
+          z-index: 2;
         }
         .pulse {
           position: absolute;
+          top: 50%; left: 50%;
           width: 40px;
           height: 40px;
+          margin: -20px 0 0 -20px;
           background-color: ${theme.route}33;
           border-radius: 50%;
-          margin-top: -13px;
-          margin-left: -13px;
           animation: pulse 2s infinite;
+          z-index: 1;
+        }
+        .user-cone {
+          position: absolute;
+          top: 50%; left: 50%;
+          width: 0;
+          height: 0;
+          margin: -34px 0 0 -9px;
+          border-left: 9px solid transparent;
+          border-right: 9px solid transparent;
+          border-bottom: 16px solid ${theme.route};
+          opacity: 0.85;
+          z-index: 0;
         }
         @keyframes pulse {
           0% { transform: scale(0.5); opacity: 1; }
@@ -93,6 +116,20 @@ export default function CampusMap({
         var userMarker = null;
         var pubgLine = null;
         var markersMap = {};
+
+        function buildUserIcon(heading) {
+          var rotation = (typeof heading === 'number' && !isNaN(heading)) ? heading : 0;
+          return L.divIcon({
+            className: '',
+            html: '<div class="user-marker-rotate" style="transform: rotate(' + rotation + 'deg);">' +
+                    '<div class="pulse"></div>' +
+                    '<div class="user-cone"></div>' +
+                    '<div class="user-dot"></div>' +
+                  '</div>',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+          });
+        }
 
         function updateData(markers, selectedId, userLoc) {
           markersLayer.clearLayers();
@@ -119,15 +156,11 @@ export default function CampusMap({
           if (userLoc) {
             if (!userMarker) {
               userMarker = L.marker([userLoc.latitude, userLoc.longitude], {
-                icon: L.divIcon({
-                  className: '',
-                  html: '<div class="pulse"></div><div class="user-dot"></div>',
-                  iconSize: [14, 14],
-                  iconAnchor: [7, 7]
-                })
+                icon: buildUserIcon(userLoc.heading)
               }).addTo(map);
             } else {
               userMarker.setLatLng([userLoc.latitude, userLoc.longitude]);
+              userMarker.setIcon(buildUserIcon(userLoc.heading));
             }
           }
 
@@ -151,19 +184,23 @@ export default function CampusMap({
           }
         }
 
-        window.addEventListener('message', function(e) {
+        function handleMessage(e) {
           var data = JSON.parse(e.data);
           if (data.type === 'UPDATE') {
             updateData(data.markers, data.selectedId, data.userLocation);
           }
-        });
+        }
+        document.addEventListener('message', handleMessage);
+        window.addEventListener('message', handleMessage);
+        
 
         // Initial update
-        updateData(${JSON.stringify(markers)}, "${selectedId}", ${JSON.stringify(userLocation)});
+         updateData(${JSON.stringify(initialDataRef.current.markers)}, "${initialDataRef.current.selectedId}", ${JSON.stringify(initialDataRef.current.userLocation)});
+       </script>
       </script>
     </body>
     </html>
-  `, [theme, center, zoom, markers, selectedId, userLocation]);
+  `, [theme, center, zoom]);
 
   // Sync data whenever props change
   useEffect(() => {

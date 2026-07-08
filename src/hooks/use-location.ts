@@ -6,6 +6,7 @@ import { CAMPUS_CENTER } from '@/constants/units';
 export type LocationState = {
   latitude: number;
   longitude: number;
+  heading?: number;
   granted: boolean;
   loading: boolean;
   error?: string;
@@ -24,6 +25,8 @@ export function useLocation() {
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
+    let positionSubscription: Location.LocationSubscription | null = null;
+    let headingSubscription: Location.LocationSubscription | null = null;
 
     async function startWatching() {
       try {
@@ -44,29 +47,38 @@ export function useLocation() {
           accuracy: Location.Accuracy.Balanced,
         });
 
-        setState({
+        setState((s) => ({
+          ...s,
           latitude: initialLocation.coords.latitude,
           longitude: initialLocation.coords.longitude,
           granted: true,
           loading: false,
-        });
+        }));
 
         // Start watching for changes
-        subscription = await Location.watchPositionAsync(
+        positionSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
             distanceInterval: 1, // Update every 1 meter
             timeInterval: 1000,   // Or every 1 second
           },
           (location) => {
-            setState({
+            setState((s) => ({
+            ...s,
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
               granted: true,
               loading: false,
-            });
+            }));
           }
         );
+
+        // Watch device compass heading — bekerja walau HP diam di tempat,
+        // beda dengan coords.heading dari GPS yang cuma valid saat bergerak.
+        headingSubscription = await Location.watchHeadingAsync((headingData) => {
+          const heading = headingData.trueHeading >= 0 ? headingData.trueHeading : headingData.magHeading;
+          setState((s) => ({ ...s, heading }));
+        });
       } catch (err: any) {
         setState((s) => ({
           ...s,
@@ -79,9 +91,12 @@ export function useLocation() {
     startWatching();
 
     return () => {
-      if (subscription) {
-        subscription.remove();
+      if (positionSubscription) {
+        positionSubscription.remove();
       }
+      if (headingSubscription) {
+       headingSubscription.remove();
+     }
     };
   }, []);
 

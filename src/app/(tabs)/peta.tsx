@@ -173,7 +173,7 @@ export default function MapScreen() {
           style={StyleSheet.absoluteFillObject as any}
           markers={markers}
           center={mapCenter}
-          userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude } : undefined}
+          userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude, heading: location.heading } : undefined}
           zoom={mapZoom}
           selectedId={String(selectedId)}
           onMarkerClick={(id) => setSelectedId(Number(id))}
