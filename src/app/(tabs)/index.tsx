@@ -332,6 +332,9 @@ export default function HomeScreen() {
           onClose={closeSearch}
           onOpenFilter={openFilter}
           onSelectUnit={(id) => { closeSearch(); go(id); }}
+          units={sorted}
+          userLat={location.latitude}
+          userLng={location.longitude}
         />
       )}
 
