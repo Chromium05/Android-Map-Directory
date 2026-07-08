@@ -301,9 +301,15 @@ export default function DetailScreen() {
           styles.cta,
           { backgroundColor: theme.background, borderColor: theme.hairline, paddingBottom: insets.bottom + Spacing.three },
         ]}>
-        <View style={[styles.ctaPin, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>
+        <Pressable
+          onPress={() => router.push({ pathname: '/peta', params: { focusUnitId: String(unit.id) } })}
+          style={({ pressed }) => [
+            styles.ctaPin,
+            { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 },
+            pressed && styles.pressed,
+          ]}>
           <Icon.pin size={18} color={theme.text} />
-        </View>
+        </Pressable>
         <Pressable 
           onPress={() => openRoute(Number(unit.lat), Number(unit.lng))}
           style={({ pressed }) => [styles.ctaButton, { backgroundColor: theme.route }, pressed && styles.pressed]}>

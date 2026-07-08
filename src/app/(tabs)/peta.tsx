@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -62,6 +62,8 @@ export default function MapScreen() {
   const theme = useTheme();
   const router = useRouter();
   const location = useLocation();
+  const params = useLocalSearchParams<{ focusUnitId?: string }>();
+
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -76,6 +78,17 @@ export default function MapScreen() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    if (!params.focusUnitId || units.length === 0) return;
+    const target = units.find((u) => String(u.id) === params.focusUnitId);
+    if (target) {
+      setActiveCat('all');
+      setSelectedId(target.id);
+      setMapCenter({ latitude: Number(target.lat), longitude: Number(target.lng) });
+      setMapZoom(18);
+    }
+  }, [params.focusUnitId, units]);
 
   const fetchInitialData = async () => {
     try {
@@ -110,6 +123,7 @@ export default function MapScreen() {
         subtitle: `${u.buildings?.name || ''} · ${u.floor}`,
         latitude: Number(u.lat),
         longitude: Number(u.lng),
+        glyph: u.categories?.glyph || 'dept',
       })),
     [visible]
   );

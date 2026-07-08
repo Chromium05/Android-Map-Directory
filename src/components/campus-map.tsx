@@ -9,6 +9,7 @@ export type CampusMapMarker = {
   longitude: number;
   title?: string;
   subtitle?: string;
+  glyph?: string;
 };
 
 export type CampusMapProps = {
@@ -117,6 +118,30 @@ export default function CampusMap({
         var pubgLine = null;
         var markersMap = {};
 
+        // Path SVG persis sama dengan Glyph di src/components/icons.tsx,
+        // supaya ikon marker peta konsisten dengan ikon kategori di seluruh app.
+        var GLYPH_ICONS = {
+          all: '<circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/>',
+          dept: '<path d="M3 9 12 4l9 5"/><path d="M5 10v8M19 10v8M3 19h18"/><path d="M9 11v6M15 11v6"/>',
+          kesehatan: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
+          vokasi: '<path d="M14.5 6a3.5 3.5 0 1 0 3.5 4l2.5 2.5-3 3L15 13a3.5 3.5 0 1 1-.5-7Z"/><path d="M11 11 4 18l2 2 7-7"/>',
+          paa: '<path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/><path d="M8 12h8M8 15h8M8 18h5"/>',
+          kemahasiswaan: '<circle cx="9" cy="9" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="8" r="2.4"/><path d="M14.5 14.5c1 0 6 0 6.5 5.5"/>',
+          lab: '<path d="M10 3h4"/><path d="M10 3v6L5 19a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 19l-5-10V3"/><path d="M7.5 14h9"/>'
+        };
+
+        // Warna beda per kategori supaya marker yang berdekatan tetap
+        // gampang dibedakan sekilas tanpa perlu baca ikonnya dulu.
+        var GLYPH_COLORS = {
+          all: '#6b7280',
+          dept: '#2f6f4f',
+          kesehatan: '#c0392b',
+          vokasi: '#e08e2b',
+          paa: '#2b6cb0',
+          kemahasiswaan: '#7c3aed',
+          lab: '#0f766e'
+        };
+
         function buildUserIcon(heading) {
           var rotation = (typeof heading === 'number' && !isNaN(heading)) ? heading : 0;
           return L.divIcon({
@@ -136,15 +161,20 @@ export default function CampusMap({
           markersMap = {};
           
           markers.forEach(function(m) {
-            // Use loose comparison to handle string/number mismatches
             var isSelected = String(m.id) == String(selectedId);
+            var pinColor = isSelected ? '${theme.route}' : (GLYPH_COLORS[m.glyph] || '${theme.text}');
+            var iconInner = GLYPH_ICONS[m.glyph] || GLYPH_ICONS.dept;
+            var html =
+              '<svg width="34" height="34" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));">' +
+                '<path d="M12 22s7.5-6.6 7.5-11.6A7.5 7.5 0 1 0 4.5 10.4C4.5 15.4 12 22 12 22Z" fill="' + pinColor + '" stroke="white" stroke-width="1"/>' +
+                '<circle cx="12" cy="9.5" r="6.2" fill="white"/>' +
+                '<g transform="translate(12 9.5) scale(0.46) translate(-12 -12)" fill="none" stroke="' + pinColor + '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">' +
+                  iconInner +
+                '</g>' +
+              '</svg>';
             var marker = L.marker([m.latitude, m.longitude], {
-              icon: L.divIcon({
-                className: '',
-                html: '<div style="background-color: ' + (isSelected ? '${theme.route}' : '${theme.text}') + '; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-              })
+              icon: L.divIcon({ className: '', html: html, iconSize: [34, 34], iconAnchor: [17, 31] }),
+              zIndexOffset: isSelected ? 1000 : 0
             }).on('click', function() {
               window.ReactNativeWebView.postMessage(JSON.stringify({type: 'CLICK', id: String(m.id)}));
             });
