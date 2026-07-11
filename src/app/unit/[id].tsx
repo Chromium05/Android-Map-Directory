@@ -14,6 +14,7 @@ import { getUnitDetail } from '@/services/api';
 import type { Unit, UnitRoom } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
 import { openRoute } from '@/utils/navigation';
+import { formatHoursRange } from '@/utils/time';
 
 function CircleButton({ children, onPress, active = false }: { children: React.ReactNode; onPress?: () => void; active?: boolean }) {
   const theme = useTheme();
@@ -277,7 +278,7 @@ export default function DetailScreen() {
           <View style={{ marginTop: Spacing.three }}>
             <InfoRow icon="pin" label="Lokasi" value={`${unit.buildings?.name} · ${unit.floor}`} accent />
             <InfoRow icon="info" label="Alamat" value={unit.address} />
-            <InfoRow icon="star" label="Jam Layanan" value={unit.open_hours} mono />
+            <InfoRow icon="star" label="Jam Layanan" value={formatHoursRange(unit.open_hours, unit.close_hours)} mono />
             <InfoRow icon="locate" label="Koordinat" value={`${unit.lat}, ${unit.lng}`} mono />
           </View>
 
@@ -300,9 +301,15 @@ export default function DetailScreen() {
           styles.cta,
           { backgroundColor: theme.background, borderColor: theme.hairline, paddingBottom: insets.bottom + Spacing.three },
         ]}>
-        <View style={[styles.ctaPin, { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 }]}>
+        <Pressable
+          onPress={() => router.push({ pathname: '/peta', params: { focusUnitId: String(unit.id) } })}
+          style={({ pressed }) => [
+            styles.ctaPin,
+            { backgroundColor: theme.backgroundElement, borderColor: theme.hairline2 },
+            pressed && styles.pressed,
+          ]}>
           <Icon.pin size={18} color={theme.text} />
-        </View>
+        </Pressable>
         <Pressable 
           onPress={() => openRoute(Number(unit.lat), Number(unit.lng))}
           style={({ pressed }) => [styles.ctaButton, { backgroundColor: theme.route }, pressed && styles.pressed]}>

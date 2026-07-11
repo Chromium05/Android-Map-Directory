@@ -12,20 +12,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Distance } from '@/components/atoms';
 import { Glyph, Icon } from '@/components/icons';
 import { Font, Radius, Spacing } from '@/constants/theme';
-import { CATEGORIES, UNITS, type Unit } from '@/constants/units';
+import { CATEGORIES, UNITS } from '@/constants/units';
 import { useTheme } from '@/hooks/use-theme';
+import type { Unit } from '@/types/database';
+import { formatDistance, getDistanceKm } from '@/utils/distance';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-function filterUnits(query: string): Unit[] {
+function filterUnits(query: string, units: Unit[]): Unit[] {
   const q = query.toLowerCase().trim();
-  if (!q) return UNITS.slice(0, 3);
-  return UNITS.filter(
+  if (!q) return units.slice(0, 3);
+  return units.filter(
     (u) =>
       u.name.toLowerCase().includes(q) ||
-      u.building.toLowerCase().includes(q) ||
-      u.short.toLowerCase().includes(q) ||
-      u.cat.toLowerCase().includes(q),
+      (u.buildings?.name || '').toLowerCase().includes(q) ||
+      u.short_name.toLowerCase().includes(q) ||
+      (u.categories?.name || '').toLowerCase().includes(q),
   ).slice(0, 4);
 }
 
@@ -55,9 +57,11 @@ function RecentChip({ label }: { label: string }) {
   );
 }
 
-function SuggestRow({ unit, last, onPress }: { unit: Unit; last: boolean; onPress: () => void }) {
+function SuggestRow({ unit, distanceKm, last, onPress }: { unit: Unit; distanceKm: number; last: boolean; onPress: () => void }) {
   const theme = useTheme();
-  const G = Glyph[unit.glyph];
+  const glyphName = unit.categories?.glyph || 'dept';
+  const G = Glyph[glyphName];
+  const { value: dist, unit: distUnit } = formatDistance(distanceKm);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => pressed && s.pressed}>
       <View style={[s.suggestRow, !last && { borderBottomWidth: 1, borderColor: theme.hairline }]}>
@@ -69,14 +73,14 @@ function SuggestRow({ unit, last, onPress }: { unit: Unit; last: boolean; onPres
             {unit.name}
           </Text>
           <View style={s.suggestMeta}>
-            <Text style={[s.metaBuilding, { color: theme.text }]}>{unit.building}</Text>
+            <Text style={[s.metaBuilding, { color: theme.text }]}>{unit.buildings?.name || ''}</Text>
             <View style={[s.tinyDot, { backgroundColor: theme.ink3 }]} />
             <Text style={[s.metaFloor, { color: theme.routeInk }]}>{unit.floor}</Text>
             <View style={[s.tinyDot, { backgroundColor: theme.ink3 }]} />
-            <Text style={[s.metaCat, { color: theme.textSecondary }]}>{unit.cat}</Text>
+            <Text style={[s.metaCat, { color: theme.textSecondary }]}>{unit.categories?.name}</Text>
           </View>
         </View>
-        <Distance value={unit.dist} unit={unit.distUnit} />
+        <Distance value={dist} unit={distUnit} />
       </View>
     </Pressable>
   );
@@ -105,6 +109,9 @@ export type SearchOverlayProps = {
   onClose: () => void;
   onOpenFilter: () => void;
   onSelectUnit: (id: number) => void;
+  units: Unit[];
+  userLat: number;
+  userLng: number;
 };
 
 export function SearchOverlay({
@@ -113,11 +120,14 @@ export function SearchOverlay({
   onClose,
   onOpenFilter,
   onSelectUnit,
+  units,
+  userLat,
+  userLng,
 }: SearchOverlayProps) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const hasQuery = query.trim().length > 0;
-  const results = filterUnits(query);
+  const results = filterUnits(query, units);
   const RECENTS = ['PAA TI', 'Lab Komputasi', 'Vokasi'];
 
   return (
@@ -180,6 +190,7 @@ export function SearchOverlay({
                   <SuggestRow
                     key={u.id}
                     unit={u}
+                    distanceKm={getDistanceKm(userLat, userLng, Number(u.lat), Number(u.lng))}
                     last={i === results.length - 1}
                     onPress={() => {
                       onClose();
@@ -219,6 +230,7 @@ export function SearchOverlay({
                     <SuggestRow
                       key={u.id}
                       unit={u}
+                      distanceKm={getDistanceKm(userLat, userLng, Number(u.lat), Number(u.lng))}
                       last={i === results.length - 1}
                       onPress={() => {
                         onClose();

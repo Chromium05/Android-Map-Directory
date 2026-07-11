@@ -1,6 +1,6 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, PanResponder, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategoryChip, Distance, FloorBadge, StatusPill } from '@/components/atoms';
@@ -8,13 +8,14 @@ import CampusMap from '@/components/campus-map';
 import { Glyph, Icon } from '@/components/icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { CAMPUS_CENTER } from '@/constants/units';
 import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
+import { formatHoursRange } from '@/utils/time';
 import { openRoute } from '@/utils/navigation';
 
 function HeaderBtn({ children }: { children: React.ReactNode }) {
@@ -61,6 +62,8 @@ export default function MapScreen() {
   const theme = useTheme();
   const router = useRouter();
   const location = useLocation();
+  const params = useLocalSearchParams<{ focusUnitId?: string }>();
+
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -71,10 +74,69 @@ export default function MapScreen() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [mapZoom, setMapZoom] = useState(16);
   const [mapCenter, setMapCenter] = useState(CAMPUS_CENTER);
+  const hasAutoCenteredRef = useRef(false);
+
+  const SHEET_PEEK = 24;
+  const sheetTranslateY = useRef(new Animated.Value(0)).current;
+  const sheetHeightRef = useRef(0);
+  const [sheetHidden, setSheetHidden] = useState(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 6,
+      onPanResponderMove: (_, g) => {
+        const base = sheetHidden ? Math.max(sheetHeightRef.current - SHEET_PEEK, 0) : 0;
+        const next = Math.max(0, Math.min(base + g.dy, Math.max(sheetHeightRef.current - SHEET_PEEK, 0)));
+        sheetTranslateY.setValue(next);
+      },
+      onPanResponderRelease: (_, g) => {
+        const maxDrag = Math.max(sheetHeightRef.current - SHEET_PEEK, 0);
+        const draggedDown = (sheetHidden ? maxDrag : 0) + g.dy;
+        const shouldHide = draggedDown > maxDrag / 2 || g.vy > 0.8;
+        Animated.spring(sheetTranslateY, {
+          toValue: shouldHide ? maxDrag : 0,
+          useNativeDriver: true,
+          bounciness: 4,
+        }).start();
+        setSheetHidden(shouldHide);
+      },
+    })
+  ).current;
+
+  // Setiap pilih marker baru, pastikan card muncul lagi dari posisi normal.
+  useEffect(() => {
+    setSheetHidden(false);
+    Animated.spring(sheetTranslateY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+  }, [selectedId]);
 
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Auto-center ke lokasi user begitu GPS siap saat pertama kali peta dibuka,
+  // supaya marker "kamu" langsung kelihatan tanpa harus digeser manual.
+  // Dilewati kalau ada focusUnitId — itu effect terpisah di bawah yang menang.
+  useEffect(() => {
+    if (params.focusUnitId) return;
+    if (hasAutoCenteredRef.current) return;
+    if (location.granted && !location.loading) {
+      setMapCenter({ latitude: location.latitude, longitude: location.longitude });
+      hasAutoCenteredRef.current = true;
+    }
+  }, [location.granted, location.loading, params.focusUnitId]);
+
+  useEffect(() => {
+    if (!params.focusUnitId || units.length === 0) return;
+    const target = units.find((u) => String(u.id) === params.focusUnitId);
+    if (target) {
+      setActiveCat('all');
+      setSelectedId(target.id);
+      setMapCenter({ latitude: Number(target.lat), longitude: Number(target.lng) });
+      setMapZoom(18);
+      hasAutoCenteredRef.current = true;
+    }
+  }, [params.focusUnitId, units]);
 
   const fetchInitialData = async () => {
     try {
@@ -109,6 +171,7 @@ export default function MapScreen() {
         subtitle: `${u.buildings?.name || ''} · ${u.floor}`,
         latitude: Number(u.lat),
         longitude: Number(u.lng),
+        glyph: u.categories?.glyph || 'dept',
       })),
     [visible]
   );
@@ -172,7 +235,7 @@ export default function MapScreen() {
           style={StyleSheet.absoluteFillObject as any}
           markers={markers}
           center={mapCenter}
-          userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude } : undefined}
+          userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude, heading: location.heading } : undefined}
           zoom={mapZoom}
           selectedId={String(selectedId)}
           onMarkerClick={(id) => setSelectedId(Number(id))}
@@ -202,12 +265,16 @@ export default function MapScreen() {
 
         {/* Bottom sheet */}
         {selected && (
-          <View
+          <Animated.View
+            onLayout={(e) => { sheetHeightRef.current = e.nativeEvent.layout.height; }}
             style={[
               styles.sheet,
-              { backgroundColor: theme.background, borderColor: theme.hairline, paddingBottom: BottomTabInset + Spacing.three },
+              { backgroundColor: theme.background, borderColor: theme.hairline, paddingBottom: insets.bottom + Spacing.three },
+              { transform: [{ translateY: sheetTranslateY }] },
             ]}>
-            <View style={[styles.handle, { backgroundColor: theme.hairline2 }]} />
+            <View {...panResponder.panHandlers} style={styles.sheetGrabArea}>
+              <View style={[styles.handle, { backgroundColor: theme.hairline2 }]} />
+            </View>
             <View style={styles.sheetTop}>
               <View style={[styles.sheetGlyph, { backgroundColor: theme.routeTint, borderColor: withAlpha(theme.route, 0.18) }]}>
                 <SelGlyph size={24} color={theme.routeInk} />
@@ -226,7 +293,7 @@ export default function MapScreen() {
                   <FloorBadge building={selected.buildings?.name || ''} floor={selected.floor} />
                   <StatusPill status={selected.status} />
                   <ThemedText type="monoMeta" themeColor="textSecondary">
-                    {selected.open_hours}
+                    {formatHoursRange(selected.open_hours, selected.close_hours)}
                   </ThemedText>
                 </View>
               </View>
@@ -254,7 +321,7 @@ export default function MapScreen() {
                 </ThemedText>
               </Pressable>
             </View>
-          </View>
+          </Animated.View>
         )}
       </View>
     </ThemedView>
@@ -317,7 +384,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
   },
-  handle: { width: 40, height: 4, borderRadius: 999, alignSelf: 'center', marginBottom: Spacing.three },
+  handle: { width: 40, height: 4, borderRadius: 999, alignSelf: 'center' },
+  sheetGrabArea: { paddingVertical: Spacing.two, marginTop: -Spacing.one, marginBottom: Spacing.two },
   sheetTop: { flexDirection: 'row', gap: Spacing.three, alignItems: 'flex-start' },
   sheetGlyph: {
     width: 48,

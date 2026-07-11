@@ -62,3 +62,23 @@ function parseTimeToMinutes(timeStr: string): number {
   
   return hours * 60 + minutes;
 }
+
+/**
+ * Formats a raw time string from the DB ("08:00:00" or "08:00") down to "HH:MM".
+ */
+export function formatTimeDisplay(time?: string | null): string {
+  if (!time) return '--:--';
+  const [hours, minutes] = time.split(':');
+  if (hours === undefined || minutes === undefined) return '--:--';
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+}
+
+/**
+ * Builds a display-ready "08:00 – 16:00" range from open/close time strings.
+ * Falls back to just the open time if close_hours isn't set.
+ */
+export function formatHoursRange(openHours?: string | null, closeHours?: string | null): string {
+  const open = formatTimeDisplay(openHours);
+  if (!closeHours) return open;
+  return `${open} – ${formatTimeDisplay(closeHours)}`;
+}
