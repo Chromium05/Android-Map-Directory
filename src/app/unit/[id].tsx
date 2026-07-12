@@ -311,7 +311,7 @@ export default function DetailScreen() {
           <Icon.pin size={18} color={theme.text} />
         </Pressable>
         <Pressable 
-          onPress={() => openRoute(Number(unit.lat), Number(unit.lng))}
+          onPress={() => router.push({ pathname: '/peta', params: { focusUnitId: String(unit.id), autoRoute: '1' } })}
           style={({ pressed }) => [styles.ctaButton, { backgroundColor: theme.route }, pressed && styles.pressed]}>
           <Icon.map size={18} color="#fff" />
           <ThemedText type="titleM" style={{ color: '#fff' }}>

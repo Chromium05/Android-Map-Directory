@@ -3,6 +3,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { useTheme } from '@/hooks/use-theme';
 
+
 export type CampusMapMarker = {
   id: string;
   latitude: number;
@@ -16,6 +17,8 @@ export type CampusMapProps = {
   markers: CampusMapMarker[];
   center: { latitude: number; longitude: number };
   userLocation?: { latitude: number; longitude: number; heading?: number };
+  routeCoordinates?: { latitude: number; longitude: number }[];
+  fitRouteTrigger?: number;
   zoom?: number;
   selectedId?: string;
   onMarkerClick?: (id: string) => void;
@@ -34,6 +37,8 @@ export default function CampusMap({
   markers,
   center,
   userLocation,
+  routeCoordinates,
+  fitRouteTrigger,
   zoom = 16,
   selectedId,
   onMarkerClick,
@@ -41,7 +46,7 @@ export default function CampusMap({
 }: CampusMapProps) {
   const theme = useTheme();
   const webViewRef = useRef<WebView>(null);
-  const initialDataRef = useRef({ markers, selectedId, userLocation });
+  const initialDataRef = useRef({ markers, selectedId, userLocation, routeCoordinates, fitRouteTrigger});
 
   // Prepare HTML content for Leaflet
   const htmlContent = useMemo(() => `
@@ -117,6 +122,7 @@ export default function CampusMap({
         var userMarker = null;
         var pubgLine = null;
         var markersMap = {};
+        var lastFitTrigger = null;
 
         // Path SVG persis sama dengan Glyph di src/components/icons.tsx,
         // supaya ikon marker peta konsisten dengan ikon kategori di seluruh app.
@@ -156,7 +162,7 @@ export default function CampusMap({
           });
         }
 
-        function updateData(markers, selectedId, userLoc) {
+        function updateData(markers, selectedId, userLoc, routeCoords, fitTrigger) {
           markersLayer.clearLayers();
           markersMap = {};
           
@@ -194,30 +200,45 @@ export default function CampusMap({
             }
           }
 
-          // Update PUBG Line
+          // Draw the actual walking route if we have one; otherwise fall back
+          // to the old straight dashed line (e.g. while the route API is
+          // loading, or if it failed/user is offline).
           if (pubgLine) {
             map.removeLayer(pubgLine);
             pubgLine = null;
           }
-
-          if (userLoc && selectedId && markersMap[String(selectedId)]) {
-            var target = markersMap[String(selectedId)];
-            pubgLine = L.polyline([
-              [userLoc.latitude, userLoc.longitude],
-              [target.latitude, target.longitude]
-            ], {
+          if (routeCoords && routeCoords.length > 1) {
+            var routeLatLngs = routeCoords.map(function(p) { return [p.latitude, p.longitude]; });
+            pubgLine = L.polyline(routeLatLngs, {
               color: '${theme.route}',
-              weight: 3,
-              dashArray: '5, 10',
-              opacity: 0.8
+              weight: 4,
+              opacity: 0.9
             }).addTo(map);
+          } else if (userLoc && selectedId) {
+            var sel = markersMap[String(selectedId)];
+            if (sel) {
+              pubgLine = L.polyline(
+                [[userLoc.latitude, userLoc.longitude], [sel.latitude, sel.longitude]],
+                { color: '${theme.route}', weight: 3, dashArray: '6, 8', opacity: 0.8 }
+              ).addTo(map);
+            }
+          }
+
+          // Tombol "Lihat Rute" bump nilai ini setiap dipencet — kalau berubah,
+          // fokuskan/zoom peta supaya seluruh garis rute yang sedang tergambar
+          // (baik rute asli dari ORS maupun fallback garis lurus) kelihatan utuh.
+          if (typeof fitRouteTrigger === 'number' && fitRouteTrigger !== lastFitTrigger) {
+            lastFitTrigger = fitRouteTrigger;
+            if (pubgLine) {
+              map.fitBounds(pubgLine.getBounds(), { padding: [48, 48] });
+            }
           }
         }
 
         function handleMessage(e) {
           var data = JSON.parse(e.data);
           if (data.type === 'UPDATE') {
-            updateData(data.markers, data.selectedId, data.userLocation);
+            updateData(data.markers, data.selectedId, data.userLocation, data.routeCoordinates, data.fitRouteTrigger);
           }
         }
         document.addEventListener('message', handleMessage);
@@ -225,7 +246,7 @@ export default function CampusMap({
         
 
         // Initial update
-         updateData(${JSON.stringify(initialDataRef.current.markers)}, "${initialDataRef.current.selectedId}", ${JSON.stringify(initialDataRef.current.userLocation)});
+         uupdateData(${JSON.stringify(initialDataRef.current.markers)}, "${initialDataRef.current.selectedId}", ${JSON.stringify(initialDataRef.current.userLocation)}, ${JSON.stringify(initialDataRef.current.routeCoordinates)}, ${JSON.stringify(initialDataRef.current.fitRouteTrigger)});
        </script>
       </script>
     </body>
@@ -238,10 +259,12 @@ export default function CampusMap({
       type: 'UPDATE',
       markers,
       selectedId,
-      userLocation
+      userLocation,
+      routeCoordinates,
+      fitRouteTrigger
     };
     webViewRef.current?.postMessage(JSON.stringify(data));
-  }, [markers, selectedId, userLocation]);
+  }, [markers, selectedId, userLocation, routeCoordinates, fitRouteTrigger]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {

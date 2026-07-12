@@ -16,7 +16,7 @@ import { getCategories, getUnits } from '@/services/api';
 import type { Category, Unit } from '@/types/database';
 import { formatDistance, getDistanceKm } from '@/utils/distance';
 import { formatHoursRange } from '@/utils/time';
-import { openRoute } from '@/utils/navigation';
+import { getWalkingRoute, type WalkingRoute } from '@/utils/routing';
 
 function HeaderBtn({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
@@ -62,7 +62,7 @@ export default function MapScreen() {
   const theme = useTheme();
   const router = useRouter();
   const location = useLocation();
-  const params = useLocalSearchParams<{ focusUnitId?: string }>();
+  const params = useLocalSearchParams<{ focusUnitId?: string; autoRoute?: string }>();
 
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -80,6 +80,25 @@ export default function MapScreen() {
   const sheetTranslateY = useRef(new Animated.Value(0)).current;
   const sheetHeightRef = useRef(0);
   const [sheetHidden, setSheetHidden] = useState(false);
+
+  const [route, setRoute] = useState<WalkingRoute | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [fitRouteTrigger, setFitRouteTrigger] = useState(0);
+
+  // Ambil rute jalan kaki asli (OSM via ORS) untuk unit tertentu — dipanggil
+  // eksplisit dari tombol "Buka Rute", BUKAN otomatis tiap marker dipilih.
+  const fetchRouteFor = async (target: Unit) => {
+    if (!location.granted) return;
+    setRouteLoading(true);
+    const result = await getWalkingRoute(
+      { latitude: location.latitude, longitude: location.longitude },
+      { latitude: Number(target.lat), longitude: Number(target.lng) }
+    );
+    setRoute(result); // null kalau gagal → CampusMap otomatis fallback ke garis lurus
+    setFitRouteTrigger((t) => t + 1);
+      setRouteLoading(false);
+  };
+  
 
   const panResponder = useRef(
     PanResponder.create({
@@ -110,6 +129,12 @@ export default function MapScreen() {
     Animated.spring(sheetTranslateY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
   }, [selectedId]);
 
+  // Marker baru dipilih → balik ke garis lurus (PUBG line) dulu; rute asli
+  // baru muncul lagi kalau user pencet "Buka Rute" untuk unit yang baru ini.
+  useEffect(() => {
+    setRoute(null);
+  }, [selectedId]);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -135,8 +160,11 @@ export default function MapScreen() {
       setMapCenter({ latitude: Number(target.lat), longitude: Number(target.lng) });
       setMapZoom(18);
       hasAutoCenteredRef.current = true;
+      if (params.autoRoute === '1') {
+        fetchRouteFor(target);
+      }
     }
-  }, [params.focusUnitId, units]);
+  }, [params.focusUnitId, params.autoRoute, units]);
 
   const fetchInitialData = async () => {
     try {
@@ -236,6 +264,8 @@ export default function MapScreen() {
           markers={markers}
           center={mapCenter}
           userLocation={location.granted ? { latitude: location.latitude, longitude: location.longitude, heading: location.heading } : undefined}
+          routeCoordinates={route?.coordinates}
+          fitRouteTrigger={fitRouteTrigger}
           zoom={mapZoom}
           selectedId={String(selectedId)}
           onMarkerClick={(id) => setSelectedId(Number(id))}
@@ -284,7 +314,10 @@ export default function MapScreen() {
                   <ThemedText type="monoTag" themeColor="ink3" style={{ letterSpacing: 0.8 }}>
                     {selected.categories?.name}
                   </ThemedText>
-                  <Distance value={dist} unit={distUnit}/>
+                  <Distance
+                    value={route ? (route.distanceM / 1000).toFixed(1) : dist}
+                    unit={route ? 'km' : distUnit}
+                  />
                 </View>
                 <ThemedText type="display" style={{ fontSize: 16, marginTop: 2 }}>
                   {selected.name}
@@ -313,11 +346,16 @@ export default function MapScreen() {
                 </ThemedText>
               </Pressable>
               <Pressable 
-                onPress={() => openRoute(Number(selected.lat), Number(selected.lng))}
+                onPress={() => selected && fetchRouteFor(selected)}
+                disabled={routeLoading}
                 style={({ pressed }) => [styles.sheetBtn, styles.sheetBtnPrimary, { backgroundColor: theme.route }, pressed && styles.pressed]}>
-                <Icon.map size={15} color="#fff" />
+                {routeLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Icon.map size={15} color="#fff" />
+                )}
                 <ThemedText type="caption" style={[styles.bold, { color: '#fff' }]}>
-                  Buka Rute
+                  Lihat Rute
                 </ThemedText>
               </Pressable>
             </View>
